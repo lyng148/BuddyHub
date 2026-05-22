@@ -1,6 +1,7 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { JwtAuthGuard } from './jwt-auth.guard';
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 
 describe('JwtAuthGuard', () => {
   const jwt = {
