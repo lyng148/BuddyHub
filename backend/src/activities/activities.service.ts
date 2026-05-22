@@ -3,10 +3,12 @@ import {
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { ActivityStatus, Prisma } from '@prisma/client';
+import { ActivityStatus, ParticipantStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateActivityDto } from './dto/create-activity.dto';
 import { GetActivitiesQueryDto } from './dto/get-activities-query.dto';
 
+const DESCRIPTION_MAX_LENGTH = 500;
 const MAX_KEYWORD_LENGTH = 100;
 const EARTH_RADIUS_KM = 6371;
 
@@ -41,6 +43,19 @@ const ALL_CATEGORY_VALUES = new Set(['all', 'tất cả']);
 const ALL_TIME_VALUES = new Set(['all', 'all_time', 'tất cả thời gian']);
 const VALID_TIME_FILTERS = new Set(['today', 'tomorrow', 'this_week']);
 
+interface ValidatedActivityInput {
+  categoryName: string;
+  title: string;
+  location: string;
+  startTime: Date;
+  endTime?: Date;
+  maxSlots: number;
+  purpose: string;
+  deadline: Date;
+  chatLink: string;
+  description?: string;
+}
+
 interface UserLocation {
   latitude: number;
   longitude: number;
@@ -71,7 +86,7 @@ export class ActivitiesService {
   async findAll(query: GetActivitiesQueryDto) {
     try {
       const keyword = this.getKeyword(query);
-      const categoryName = this.getCategoryName(query);
+      const categoryName = this.getFilterCategoryName(query);
       const timeRange = this.getTimeRange(query);
       const userLocation = this.getUserLocation(query);
 
@@ -112,7 +127,7 @@ export class ActivitiesService {
           },
           _count: {
             select: {
-              participants: { where: { status: 'JOINED' } },
+              participants: { where: { status: ParticipantStatus.JOINED } },
             },
           },
         },
@@ -125,7 +140,42 @@ export class ActivitiesService {
         throw error;
       }
 
-      throw new InternalServerErrorException({ message: 'error' });
+      throw new InternalServerErrorException('error');
+    }
+  }
+
+  async create(hostId: string, dto: CreateActivityDto) {
+    try {
+      const input = this.validateCreateActivity(dto);
+      const category = await this.prisma.activityCategory.upsert({
+        where: { name: input.categoryName },
+        update: {},
+        create: { name: input.categoryName },
+      });
+
+      await this.prisma.activity.create({
+        data: {
+          hostId,
+          categoryId: category.id,
+          title: input.title,
+          location: input.location,
+          startTime: input.startTime,
+          endTime: input.endTime,
+          maxSlots: input.maxSlots,
+          purpose: input.purpose,
+          deadline: input.deadline,
+          chatLink: input.chatLink,
+          description: input.description,
+        },
+      });
+
+      return { message: 'OK' };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException('error');
     }
   }
 
@@ -181,6 +231,63 @@ export class ActivitiesService {
     });
   }
 
+  private validateCreateActivity(
+    dto: CreateActivityDto,
+  ): ValidatedActivityInput {
+    const categoryName = this.getCreateCategoryName(dto);
+    const title = this.getRequiredString(dto, [
+      'title',
+      'name',
+      'activityName',
+    ]);
+    const location = this.getRequiredString(dto, ['location']);
+    const startTime = this.getActivityStartTime(dto);
+    const endTime = this.getOptionalActivityEndTime(dto);
+    const maxSlots = this.getPositiveInteger(dto, [
+      'maxSlots',
+      'maxPeople',
+      'maxParticipants',
+      'capacity',
+    ]);
+    const purpose = this.getRequiredString(dto, ['purpose']);
+    const deadline = this.getDate(dto, ['deadline', 'registrationDeadline']);
+    const chatLink = this.getRequiredString(dto, [
+      'chatLink',
+      'contactLink',
+      'groupChatLink',
+    ]);
+    const description = this.getOptionalString(dto, ['description']);
+
+    if (deadline >= startTime) {
+      throw this.error();
+    }
+
+    if (endTime && endTime <= startTime) {
+      throw this.error();
+    }
+
+    if (!this.isChatLink(chatLink)) {
+      throw this.error();
+    }
+
+    if (description && description.length > DESCRIPTION_MAX_LENGTH) {
+      throw this.error();
+    }
+
+    return {
+      categoryName,
+      title,
+      location,
+      startTime,
+      endTime,
+      maxSlots,
+      purpose,
+      deadline,
+      chatLink,
+      description,
+    };
+  }
+
   private getKeyword(query: GetActivitiesQueryDto) {
     const keyword = this.getOptionalString(query, ['keyword']);
     if (!keyword) return undefined;
@@ -192,7 +299,7 @@ export class ActivitiesService {
     return keyword;
   }
 
-  private getCategoryName(query: GetActivitiesQueryDto) {
+  private getFilterCategoryName(query: GetActivitiesQueryDto) {
     const rawCategory = this.getOptionalString(query, [
       'category',
       'type',
@@ -203,7 +310,22 @@ export class ActivitiesService {
     const normalized = this.normalize(rawCategory);
     if (ALL_CATEGORY_VALUES.has(normalized)) return undefined;
 
-    const categoryName = CATEGORY_ALIASES.get(normalized);
+    return this.getAllowedCategoryName(normalized);
+  }
+
+  private getCreateCategoryName(dto: CreateActivityDto) {
+    const rawCategory = this.getRequiredString(dto, [
+      'type',
+      'category',
+      'categoryName',
+      'activityType',
+    ]);
+
+    return this.getAllowedCategoryName(this.normalize(rawCategory));
+  }
+
+  private getAllowedCategoryName(normalizedCategory: string) {
+    const categoryName = CATEGORY_ALIASES.get(normalizedCategory);
     if (!categoryName) {
       throw this.error();
     }
@@ -266,11 +388,125 @@ export class ActivitiesService {
     return { latitude, longitude };
   }
 
-  private getOptionalString(
-    query: GetActivitiesQueryDto,
-    keys: Array<keyof GetActivitiesQueryDto>,
+  private getActivityStartTime(dto: CreateActivityDto) {
+    const directValue = this.findFirstValue(dto, ['startTime', 'startAt', 'time']);
+    if (directValue !== undefined) {
+      return this.parseDate(directValue);
+    }
+
+    const activityDate = this.getRequiredString(dto, ['date', 'activityDate']);
+    const start = this.getRequiredString(dto, ['start', 'startHour']);
+
+    return this.parseDateAndTime(activityDate, start);
+  }
+
+  private getOptionalActivityEndTime(dto: CreateActivityDto) {
+    const directValue = this.findFirstValue(dto, ['endTime', 'endAt']);
+    if (directValue !== undefined) {
+      return this.parseDate(directValue);
+    }
+
+    const end = this.findFirstValue(dto, ['end', 'endHour']);
+    if (end === undefined) {
+      return undefined;
+    }
+
+    const activityDate = this.getRequiredString(dto, ['date', 'activityDate']);
+    if (typeof end !== 'string' || !end.trim()) {
+      throw this.error();
+    }
+
+    return this.parseDateAndTime(activityDate, end.trim());
+  }
+
+  private getDate<T extends object>(dto: T, keys: Array<keyof T>) {
+    return this.parseDate(this.getFirstValue(dto, keys));
+  }
+
+  private parseDate(value: unknown) {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return value;
+    }
+
+    if (typeof value !== 'string' || !value.trim()) {
+      throw this.error();
+    }
+
+    const parsed = new Date(value.trim());
+    if (Number.isNaN(parsed.getTime())) {
+      throw this.error();
+    }
+
+    return parsed;
+  }
+
+  private parseDateAndTime(dateValue: string, timeValue: string) {
+    const dateMatch = dateValue
+      .trim()
+      .match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const timeMatch = timeValue
+      .trim()
+      .match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+
+    if (!dateMatch || !timeMatch) {
+      throw this.error();
+    }
+
+    const [, year, month, day] = dateMatch;
+    const [, hour, minute, second = '0'] = timeMatch;
+    const date = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second),
+    );
+
+    if (
+      date.getFullYear() !== Number(year) ||
+      date.getMonth() !== Number(month) - 1 ||
+      date.getDate() !== Number(day) ||
+      date.getHours() !== Number(hour) ||
+      date.getMinutes() !== Number(minute) ||
+      date.getSeconds() !== Number(second)
+    ) {
+      throw this.error();
+    }
+
+    return date;
+  }
+
+  private getPositiveInteger<T extends object>(
+    dto: T,
+    keys: Array<keyof T>,
   ) {
-    const value = this.findFirstValue(query, keys);
+    const value = this.getFirstValue(dto, keys);
+    const numericValue =
+      typeof value === 'number'
+        ? value
+        : typeof value === 'string'
+          ? Number(value.trim())
+          : Number.NaN;
+
+    if (!Number.isInteger(numericValue) || numericValue <= 0) {
+      throw this.error();
+    }
+
+    return numericValue;
+  }
+
+  private getRequiredString<T extends object>(dto: T, keys: Array<keyof T>) {
+    const value = this.getFirstValue(dto, keys);
+    if (typeof value !== 'string' || !value.trim()) {
+      throw this.error();
+    }
+
+    return value.trim();
+  }
+
+  private getOptionalString<T extends object>(dto: T, keys: Array<keyof T>) {
+    const value = this.findFirstValue(dto, keys);
     if (value === undefined) return undefined;
 
     if (typeof value !== 'string') {
@@ -281,12 +517,18 @@ export class ActivitiesService {
     return trimmedValue ? trimmedValue : undefined;
   }
 
-  private findFirstValue(
-    query: GetActivitiesQueryDto,
-    keys: Array<keyof GetActivitiesQueryDto>,
-  ) {
+  private getFirstValue<T extends object>(dto: T, keys: Array<keyof T>) {
+    const value = this.findFirstValue(dto, keys);
+    if (value !== undefined) {
+      return value;
+    }
+
+    throw this.error();
+  }
+
+  private findFirstValue<T extends object>(dto: T, keys: Array<keyof T>) {
     for (const key of keys) {
-      const value = query[key];
+      const value = dto[key];
       if (value !== undefined && value !== null && value !== '') {
         return value;
       }
@@ -328,7 +570,9 @@ export class ActivitiesService {
         Math.sin(longitudeDelta / 2) ** 2;
 
     const distance =
-      2 * EARTH_RADIUS_KM * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+      2 *
+      EARTH_RADIUS_KM *
+      Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 
     return Math.round(distance * 100) / 100;
   }
@@ -352,11 +596,38 @@ export class ActivitiesService {
     return this.addDays(today, daysUntilNextMonday);
   }
 
+  private isChatLink(value: string) {
+    try {
+      const url = new URL(value);
+      if (!['http:', 'https:'].includes(url.protocol)) return false;
+
+      const hostname = url.hostname.toLowerCase();
+      const pathname = url.pathname.toLowerCase();
+
+      return (
+        hostname === 't.me' ||
+        hostname.endsWith('.t.me') ||
+        hostname === 'telegram.me' ||
+        hostname.endsWith('.telegram.me') ||
+        hostname === 'zalo.me' ||
+        hostname.endsWith('.zalo.me') ||
+        hostname === 'm.me' ||
+        hostname.endsWith('.m.me') ||
+        hostname === 'messenger.com' ||
+        hostname.endsWith('.messenger.com') ||
+        ((hostname === 'facebook.com' || hostname.endsWith('.facebook.com')) &&
+          pathname.startsWith('/messages'))
+      );
+    } catch {
+      return false;
+    }
+  }
+
   private normalize(value: string) {
     return value.normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase();
   }
 
   private error() {
-    return new BadRequestException({ message: 'error' });
+    return new BadRequestException('error');
   }
 }
