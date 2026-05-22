@@ -14,6 +14,8 @@ import { SendOtpDto } from './dto/send-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 // Format: firstName.InitialsMSSVsuffix  VD: Huyen.DNK225726
 const HUST_LOCAL_REGEX = /^[a-zA-Z]+\.[a-zA-Z]+\d{6,7}$/;
@@ -184,6 +186,76 @@ export class AuthService implements OnModuleInit {
     const accessToken = this.jwt.sign({ sub: user.id, email: user.email });
 
     return { message: 'OK', accessToken };
+  }
+
+  // ----------------------------------------------------------------
+  // Quên mật khẩu — gửi OTP về email
+  // ----------------------------------------------------------------
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const email = dto.email.toLowerCase();
+
+    if (!email.endsWith('@sis.hust.edu.vn')) {
+      throw new BadRequestException('Chỉ chấp nhận email @sis.hust.edu.vn');
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      throw new BadRequestException('Email này chưa được đăng ký');
+    }
+
+    // Vô hiệu hóa các OTP cũ chưa dùng
+    await this.prisma.emailVerificationCode.updateMany({
+      where: { email, purpose: 'RESET_PASSWORD', usedAt: null },
+      data: { usedAt: new Date() },
+    });
+
+    const otp = randomInt(100000, 999999).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    const record = await this.prisma.emailVerificationCode.create({
+      data: { email, userId: user.id, code: otp, purpose: 'RESET_PASSWORD', expiresAt },
+    });
+
+    try {
+      await this.sendOtpEmail(email, otp);
+    } catch {
+      await this.prisma.emailVerificationCode.delete({ where: { id: record.id } });
+      throw new InternalServerErrorException('Không thể gửi email, vui lòng thử lại');
+    }
+
+    return { message: 'OK' };
+  }
+
+  // ----------------------------------------------------------------
+  // Đặt lại mật khẩu — xác minh OTP và cập nhật password
+  // ----------------------------------------------------------------
+  async resetPassword(dto: ResetPasswordDto) {
+    const email = dto.email.toLowerCase();
+
+    const record = await this.prisma.emailVerificationCode.findFirst({
+      where: { email, code: dto.otp, purpose: 'RESET_PASSWORD', usedAt: null },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!record) {
+      throw new BadRequestException('OTP không hợp lệ');
+    }
+    if (record.expiresAt < new Date()) {
+      throw new BadRequestException('OTP đã hết hạn');
+    }
+
+    await this.prisma.emailVerificationCode.update({
+      where: { id: record.id },
+      data: { usedAt: new Date() },
+    });
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, 10);
+    await this.prisma.user.update({
+      where: { email },
+      data: { passwordHash },
+    });
+
+    return { message: 'OK' };
   }
 
   // ----------------------------------------------------------------
