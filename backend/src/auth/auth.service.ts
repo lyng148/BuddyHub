@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { randomInt } from 'crypto';
+
 import * as bcrypt from 'bcrypt';
 import * as nodemailer from 'nodemailer';
 import { PrismaService } from '../prisma/prisma.service';
@@ -30,8 +31,8 @@ export class AuthService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-      throw new Error('Thiếu cấu hình SMTP (SMTP_HOST, SMTP_USER, SMTP_PASS)');
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS || !process.env.SMTP_FROM) {
+      throw new Error('Thiếu cấu hình SMTP (SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_FROM)');
     }
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -64,18 +65,19 @@ export class AuthService implements OnModuleInit {
       throw new BadRequestException('Email này đã được đăng ký');
     }
 
-    // Vô hiệu hóa các OTP cũ chưa dùng
-    await this.prisma.emailVerificationCode.updateMany({
-      where: { email, purpose: 'REGISTER', usedAt: null },
-      data: { usedAt: new Date() },
-    });
-
-    const otp = randomInt(100000, 999999).toString();
+    const otp = randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    const record = await this.prisma.emailVerificationCode.create({
-      data: { email, code: otp, purpose: 'REGISTER', expiresAt },
-    });
+    // Vô hiệu hóa OTP cũ và tạo OTP mới trong 1 transaction
+    const [, record] = await this.prisma.$transaction([
+      this.prisma.emailVerificationCode.updateMany({
+        where: { email, purpose: 'REGISTER', usedAt: null },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.emailVerificationCode.create({
+        data: { email, code: otp, purpose: 'REGISTER', expiresAt },
+      }),
+    ]);
 
     try {
       await this.sendOtpEmail(email, otp);
@@ -94,22 +96,23 @@ export class AuthService implements OnModuleInit {
   async verifyOtp(dto: VerifyOtpDto) {
     const email = dto.email.toLowerCase();
 
-    const record = await this.prisma.emailVerificationCode.findFirst({
-      where: { email, code: dto.otp, purpose: 'REGISTER', usedAt: null },
-      orderBy: { createdAt: 'desc' },
+    const now = new Date();
+
+    // Atomic: chỉ update được nếu OTP đúng, chưa dùng, chưa hết hạn
+    const consumed = await this.prisma.emailVerificationCode.updateMany({
+      where: { email, code: dto.otp, purpose: 'REGISTER', usedAt: null, expiresAt: { gt: now } },
+      data: { usedAt: now },
     });
 
-    if (!record) {
+    if (consumed.count === 0) {
+      // Phân biệt "sai OTP" vs "hết hạn"
+      const exists = await this.prisma.emailVerificationCode.findFirst({
+        where: { email, code: dto.otp, purpose: 'REGISTER' },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (exists && exists.expiresAt < now) throw new BadRequestException('OTP đã hết hạn');
       throw new BadRequestException('OTP không hợp lệ');
     }
-    if (record.expiresAt < new Date()) {
-      throw new BadRequestException('OTP đã hết hạn');
-    }
-
-    await this.prisma.emailVerificationCode.update({
-      where: { id: record.id },
-      data: { usedAt: new Date() },
-    });
 
     const { firstName, studentId, schoolYear } = this.parseHustEmail(email);
 
@@ -129,7 +132,7 @@ export class AuthService implements OnModuleInit {
     try {
       payload = this.jwt.verify(dto.tempToken);
     } catch {
-      throw new UnauthorizedException('Phiên xác thực hết hạn, vui lòng thử lại');
+      throw new UnauthorizedException('Phiên xác thực hết hạn');
     }
 
     if (payload.type !== 'temp_registration') {
@@ -203,18 +206,18 @@ export class AuthService implements OnModuleInit {
       throw new BadRequestException('Email này chưa được đăng ký');
     }
 
-    // Vô hiệu hóa các OTP cũ chưa dùng
-    await this.prisma.emailVerificationCode.updateMany({
-      where: { email, purpose: 'RESET_PASSWORD', usedAt: null },
-      data: { usedAt: new Date() },
-    });
-
-    const otp = randomInt(100000, 999999).toString();
+    const otp = randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    const record = await this.prisma.emailVerificationCode.create({
-      data: { email, userId: user.id, code: otp, purpose: 'RESET_PASSWORD', expiresAt },
-    });
+    const [, record] = await this.prisma.$transaction([
+      this.prisma.emailVerificationCode.updateMany({
+        where: { email, purpose: 'RESET_PASSWORD', usedAt: null },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.emailVerificationCode.create({
+        data: { email, userId: user.id, code: otp, purpose: 'RESET_PASSWORD', expiresAt },
+      }),
+    ]);
 
     try {
       await this.sendOtpEmail(email, otp);
@@ -232,22 +235,21 @@ export class AuthService implements OnModuleInit {
   async resetPassword(dto: ResetPasswordDto) {
     const email = dto.email.toLowerCase();
 
-    const record = await this.prisma.emailVerificationCode.findFirst({
-      where: { email, code: dto.otp, purpose: 'RESET_PASSWORD', usedAt: null },
-      orderBy: { createdAt: 'desc' },
+    const now = new Date();
+
+    const consumed = await this.prisma.emailVerificationCode.updateMany({
+      where: { email, code: dto.otp, purpose: 'RESET_PASSWORD', usedAt: null, expiresAt: { gt: now } },
+      data: { usedAt: now },
     });
 
-    if (!record) {
+    if (consumed.count === 0) {
+      const exists = await this.prisma.emailVerificationCode.findFirst({
+        where: { email, code: dto.otp, purpose: 'RESET_PASSWORD' },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (exists && exists.expiresAt < now) throw new BadRequestException('OTP đã hết hạn');
       throw new BadRequestException('OTP không hợp lệ');
     }
-    if (record.expiresAt < new Date()) {
-      throw new BadRequestException('OTP đã hết hạn');
-    }
-
-    await this.prisma.emailVerificationCode.update({
-      where: { id: record.id },
-      data: { usedAt: new Date() },
-    });
 
     const passwordHash = await bcrypt.hash(dto.newPassword, 10);
     await this.prisma.user.update({
