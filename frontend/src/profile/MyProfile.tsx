@@ -163,10 +163,7 @@ export default function MyProfile() {
         faculty: draft.faculty.trim() || null,
         schoolYear: draft.schoolYear.trim() ? Number(draft.schoolYear) : null,
         bio: draft.bio.trim() || null,
-      }
-
-      if (draft.interests.length > 0) {
-        payload.interests = draft.interests
+        interests: draft.interests,
       }
 
       await api.put('/users/me/profile', payload)
