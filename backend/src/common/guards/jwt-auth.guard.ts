@@ -9,6 +9,7 @@ import type { Request } from 'express';
 
 export interface AuthenticatedUser {
   id: string;
+  sub?: string;
   email?: string;
 }
 
@@ -41,7 +42,8 @@ export class JwtAuthGuard implements CanActivate {
         throw new Error('Missing subject');
       }
 
-      request.user = { id: payload.sub, email: payload.email };
+      // attach both `id` and `sub` to support different decorators/controllers
+      request.user = { id: payload.sub as string, sub: payload.sub as string, email: payload.email };
       return true;
     } catch {
       throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn');
