@@ -1,41 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getDashboard, updateProfile, type ProfilePayload } from '../api'
+import { AppNav } from '../components/layout/AppNav'
+import { formatActivityTime } from '../lib/formatActivity'
 import { navigate } from '../lib/navigation'
+import type { DashboardResponse } from '../types/dashboard'
 import './ProfilePage.css'
-
-type DashboardActivity = {
-  id: string
-  title: string
-  location: string
-  startTime: string
-  maxSlots: number
-  currentParticipants: number
-  role: 'host' | 'joined'
-  categoryName: string
-}
-
-type DashboardResponse = {
-  message: string
-  profile: {
-    id: string
-    email: string
-    studentId: string
-    name: string
-    faculty?: string | null
-    schoolYear?: number | null
-    gender?: 'MALE' | 'FEMALE' | 'ALL' | null
-    avatarUrl?: string | null
-    bio?: string | null
-    interests: string[]
-    hostedCount: number
-    joinedCount: number
-    isVerified: boolean
-  }
-  activities: {
-    upcoming: DashboardActivity[]
-    history: DashboardActivity[]
-  }
-}
 
 type ProfileDraft = {
   name: string
@@ -43,15 +12,6 @@ type ProfileDraft = {
   schoolYear: string
   bio: string
   interests: string[]
-}
-
-function formatActivityTime(value: string) {
-  const date = new Date(value)
-  const day = date.getDay()
-  const dayLabel = ['CN', 'Th 2', 'Th 3', 'Th 4', 'Th 5', 'Th 6', 'Th 7'][day] ?? 'Th'
-  const dateLabel = `${date.getDate()}/${date.getMonth() + 1}`
-  const timeLabel = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })
-  return `${dayLabel}, ${dateLabel} • ${timeLabel}`
 }
 
 function formatRole(role: 'host' | 'joined') {
@@ -200,6 +160,8 @@ export default function ProfilePage() {
 
   return (
     <main className="myprofile-shell">
+      <AppNav active="profile" />
+
       <section className="myprofile-card myprofile-hero">
         <div className="myprofile-cover" />
         <div className="myprofile-header">
@@ -380,13 +342,13 @@ export default function ProfilePage() {
       </section>
 
       <section className="profile-actions-grid">
-        <div className="action-card">
+        <button type="button" className="action-card action-card-button" onClick={() => navigate('/my-events')}>
           <div className="action-card-icon action-card-icon-orange">📅</div>
           <div>
             <strong>Sự kiện của tôi</strong>
-            <span>Đã tham gia &amp; đã tạo</span>
+            <span>Đã tạo &amp; đã tham gia</span>
           </div>
-        </div>
+        </button>
 
         <button type="button" className="action-card action-card-button" onClick={() => navigate('/activities/new')}>
           <div className="action-card-icon action-card-icon-teal">＋</div>

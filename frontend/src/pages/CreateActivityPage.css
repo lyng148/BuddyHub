@@ -225,6 +225,14 @@
   min-height: 100%;
 }
 
+.create-gender-field {
+  grid-column: 1 / -1;
+}
+
+.create-gender-field .choice-row-gender {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .create-field-grid-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }

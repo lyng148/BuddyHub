@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import type { AuthenticatedRequest } from '../common/guards/jwt-auth.guard';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { ActivitiesService } from './activities.service';
@@ -13,6 +24,21 @@ export class ActivitiesController {
   @Get()
   findAll(@Query() query: GetActivitiesQueryDto) {
     return this.activitiesService.findAll(query);
+  }
+
+  // GET /api/activities/:id
+  @Get(':id')
+  findOne(
+    @Param(
+      'id',
+      new ParseUUIDPipe({
+        version: '4',
+        exceptionFactory: () => new BadRequestException('ID hoạt động không hợp lệ'),
+      }),
+    )
+    id: string,
+  ) {
+    return this.activitiesService.findOne(id);
   }
 
   // POST /api/activities

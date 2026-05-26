@@ -1,0 +1,61 @@
+.my-events-page {
+  position: relative;
+  min-height: 100svh;
+  padding: 20px 20px 48px;
+  overflow: hidden;
+  font-family: var(--sans);
+}
+
+.my-events-shell {
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+  margin: 0 auto;
+  display: grid;
+  gap: 22px;
+}
+
+.my-events-intro h1 {
+  margin: 0;
+  font-family: var(--heading);
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  font-weight: 800;
+  color: #2d2a33;
+}
+
+.my-events-intro p {
+  margin: 8px 0 0;
+  color: #7f7786;
+}
+
+.my-events-panel {
+  margin-top: 0;
+}
+
+.my-events-item {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.my-events-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(136, 96, 55, 0.08);
+}
+
+.my-events-category {
+  color: #e6762e;
+  font-weight: 700;
+}
+
+.my-events-error {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #fff1f0;
+  color: #c0392b;
+  border: 1px solid #ffd3cf;
+}

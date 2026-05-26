@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ActivityStatus, Gender, ParticipantStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -95,6 +96,72 @@ type ActivityListItem = Prisma.ActivityGetPayload<{
 @Injectable()
 export class ActivitiesService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async findOne(id: string) {
+    try {
+      const activity = await this.prisma.activity.findUnique({
+        where: { id },
+        include: {
+          category: true,
+          host: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+          participants: {
+            where: { status: ParticipantStatus.JOINED },
+            orderBy: { joinedAt: 'asc' },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!activity) {
+        throw new NotFoundException('Không tìm thấy hoạt động');
+      }
+
+      const participants = activity.participants.map((item) => ({
+        id: item.user.id,
+        name: item.user.name,
+      }));
+
+      return {
+        id: activity.id,
+        title: activity.title,
+        categoryName: activity.category.name,
+        purpose: activity.purpose,
+        location: activity.location,
+        startTime: activity.startTime,
+        endTime: activity.endTime,
+        deadline: activity.deadline,
+        maxSlots: activity.maxSlots,
+        currentParticipants: participants.length,
+        description: activity.description,
+        status: activity.status,
+        gender: activity.gender,
+        host: activity.host,
+        participants,
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException('Không thể lấy chi tiết hoạt động');
+    }
+  }
 
   async findAll(query: GetActivitiesQueryDto) {
     try {

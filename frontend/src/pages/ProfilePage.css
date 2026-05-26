@@ -8,6 +8,8 @@
   padding: 24px 20px 40px;
   font-family: var(--sans);
   color: #2f3138;
+  display: grid;
+  gap: 20px;
 }
 
 .myprofile-card {
