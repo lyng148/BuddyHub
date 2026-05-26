@@ -201,6 +201,37 @@ export function CreateActivityScreen({
             />
             {errors.chatLink && <small className="field-error">{errors.chatLink}</small>}
           </label>
+
+          <div className="field create-gender-field">
+            <span>Yêu cầu về giới tính</span>
+            <div className="choice-row choice-row-gender" role="group" aria-label="Yêu cầu về giới tính">
+              <button
+                type="button"
+                className={`choice-pill choice-pill-gender ${form.gender === 'male' ? 'is-selected' : ''}`}
+                aria-pressed={form.gender === 'male'}
+                onClick={() => onChange('gender', 'male')}
+              >
+                Nam
+              </button>
+              <button
+                type="button"
+                className={`choice-pill choice-pill-gender ${form.gender === 'female' ? 'is-selected' : ''}`}
+                aria-pressed={form.gender === 'female'}
+                onClick={() => onChange('gender', 'female')}
+              >
+                Nữ
+              </button>
+              <button
+                type="button"
+                className={`choice-pill choice-pill-gender ${form.gender === 'all' ? 'is-selected' : ''}`}
+                aria-pressed={form.gender === 'all'}
+                onClick={() => onChange('gender', 'all')}
+              >
+                Không yêu cầu
+              </button>
+            </div>
+            {errors.gender && <small className="field-error">{errors.gender}</small>}
+          </div>
         </div>
       </section>
 

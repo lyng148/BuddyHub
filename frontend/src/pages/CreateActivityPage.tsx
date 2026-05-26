@@ -1,9 +1,10 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { createActivity } from '../api'
 import { CreateActivityScreen } from '../components/activities/CreateActivityScreen'
+import { AppNav } from '../components/layout/AppNav'
 import { getApiErrorMessage } from '../lib/errors'
 import { navigate } from '../lib/navigation'
-import { validateCreateActivityForm } from '../lib/validateActivity'
+import { hasValidCategory, validateCreateActivityForm } from '../lib/validateActivity'
 import type { Banner, CreateActivityForm, FieldErrors } from '../types/activity'
 import '../App.css'
 import './CreateActivityPage.css'
@@ -17,6 +18,7 @@ const initialForm: CreateActivityForm = {
   endTime: '',
   maxSlots: '',
   purpose: '',
+  gender: 'all',
   deadline: '',
   chatLink: '',
   description: '',
@@ -70,6 +72,9 @@ export default function CreateActivityPage() {
     if (Object.keys(nextErrors).length > 0) {
       return
     }
+    if (!hasValidCategory(form)) {
+      return
+    }
 
     setLoading(true)
     try {
@@ -84,6 +89,7 @@ export default function CreateActivityPage() {
         purpose: form.purpose.trim(),
         deadline: new Date(form.deadline).toISOString(),
         groupChatLink: form.chatLink.trim(),
+        gender: form.gender,
         description: form.description.trim() || undefined,
       })
 
@@ -118,21 +124,7 @@ export default function CreateActivityPage() {
       <div className="auth-orb auth-orb-two" aria-hidden />
 
       <div className="create-activity-frame">
-        <header className="create-topbar">
-          <button type="button" className="create-back-button" onClick={handleCancel}>
-            ← Quay lại
-          </button>
-
-          <div className="brand-bar create-brand-bar">
-            <div className="brand-mark" aria-hidden>
-              BH
-            </div>
-            <div className="brand-copy">
-              <strong>BuddyHub</strong>
-              <span>Tạo hoạt động mới</span>
-            </div>
-          </div>
-        </header>
+        <AppNav active="profile" />
 
         <div className="create-hero-card">
           <div className="create-hero-icon" aria-hidden>

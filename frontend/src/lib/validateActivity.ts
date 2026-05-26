@@ -1,4 +1,10 @@
-import type { CreateActivityForm, FieldErrors } from '../types/activity'
+import type { ActivityCategory, CreateActivityForm, FieldErrors } from '../types/activity'
+
+export function hasValidCategory(
+  form: CreateActivityForm,
+): form is CreateActivityForm & { category: ActivityCategory } {
+  return form.category !== ''
+}
 
 const DESCRIPTION_MAX = 500
 

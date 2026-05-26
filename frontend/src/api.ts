@@ -1,5 +1,10 @@
 import api from './lib/axios'
-import type { ActivityCategory } from './types/activity'
+import type {
+  ActivityCategory,
+  ActivityDetail,
+  ActivityGenderRequirement,
+  ActivityListItem,
+} from './types/activity'
 
 type AuthLoginPayload = {
   email: string
@@ -93,10 +98,27 @@ export type CreateActivityPayload = {
   purpose: string
   deadline: string
   groupChatLink: string
+  gender: ActivityGenderRequirement
   description?: string
 }
 
 export async function createActivity(payload: CreateActivityPayload) {
   const response = await api.post('/activities', payload)
+  return response.data
+}
+
+export type FetchActivitiesParams = {
+  keyword?: string
+  category?: string
+  time?: string
+}
+
+export async function fetchActivities(params?: FetchActivitiesParams) {
+  const response = await api.get<ActivityListItem[]>('/activities', { params })
+  return response.data
+}
+
+export async function fetchActivity(activityId: string) {
+  const response = await api.get<ActivityDetail>(`/activities/${activityId}`)
   return response.data
 }
