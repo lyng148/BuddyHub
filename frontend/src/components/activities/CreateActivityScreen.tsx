@@ -1,9 +1,9 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { ButtonSpinner } from '../common/LoadingState'
 import { getNowDateTimeLocalMin, getTodayDateMin } from '../../lib/validateActivity'
-import { ACTIVITY_CATEGORIES, type ActivityCategory, type Banner, type CreateActivityForm, type FieldErrors } from '../../types/activity'
+import type { Banner, CreateActivityForm, FieldErrors } from '../../types/activity'
 
-const CATEGORY_ICONS: Record<ActivityCategory, string> = {
+const CATEGORY_ICONS: Record<string, string> = {
   'Ăn uống': '🍜',
   'Học nhóm': '📚',
   'Board Games': '🎲',
@@ -17,6 +17,7 @@ type CreateActivityScreenProps = {
   errors: FieldErrors
   loading: boolean
   banner: Banner
+  categories: string[]
   onChange: <K extends keyof CreateActivityForm>(field: K, value: CreateActivityForm[K]) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   onCancel: () => void
@@ -27,6 +28,7 @@ export function CreateActivityScreen({
   errors,
   loading,
   banner,
+  categories,
   onChange,
   onSubmit,
   onCancel,
@@ -70,7 +72,7 @@ export function CreateActivityScreen({
         </div>
 
         <div className="category-grid" role="group" aria-label="Loại hoạt động">
-          {ACTIVITY_CATEGORIES.map((category) => {
+          {categories.map((category) => {
             const selected = form.category === category
             return (
               <button
@@ -81,7 +83,7 @@ export function CreateActivityScreen({
                 onClick={() => onChange('category', category)}
               >
                 <span className="category-card-icon" aria-hidden>
-                  {CATEGORY_ICONS[category]}
+                  {CATEGORY_ICONS[category] ?? '✨'}
                 </span>
                 <span className="category-card-label">{category}</span>
               </button>
