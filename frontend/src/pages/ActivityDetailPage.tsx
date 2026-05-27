@@ -54,6 +54,7 @@ export default function ActivityDetailPage({ activityId }: ActivityDetailPagePro
   const [joining, setJoining] = useState(false)
   const [chatLink, setChatLink] = useState<string | null>(null)
   const [joinError, setJoinError] = useState<string | null>(null)
+  const [showJoinConfirm, setShowJoinConfirm] = useState(false)
   const [userGender, setUserGender] = useState<string | null>(null)
   const source = getDetailSource()
 
@@ -84,6 +85,7 @@ export default function ActivityDetailPage({ activityId }: ActivityDetailPagePro
   }, [])
 
   const handleJoin = async () => {
+    setShowJoinConfirm(false)
     try {
       setJoining(true)
       setJoinError(null)
@@ -308,6 +310,13 @@ export default function ActivityDetailPage({ activityId }: ActivityDetailPagePro
                       }[activity.status ?? 'OPEN']
                     }
                   </span>
+                  <button
+                    type="button"
+                    className="activity-detail-join-btn"
+                    onClick={() => navigate(`/activities/${activityId}/edit`)}
+                  >
+                    ✏️ Chỉnh sửa hoạt động
+                  </button>
                   {activity.chatLink && (
                     <>
                       <a
@@ -361,7 +370,7 @@ export default function ActivityDetailPage({ activityId }: ActivityDetailPagePro
                   <button
                     type="button"
                     className="activity-detail-join-btn"
-                    onClick={handleJoin}
+                    onClick={() => setShowJoinConfirm(true)}
                     disabled={joining}
                   >
                     {joining ? <ButtonSpinner label="Đang xử lý..." /> : 'Tham gia'}
@@ -405,6 +414,31 @@ export default function ActivityDetailPage({ activityId }: ActivityDetailPagePro
           </div>
         )}
       </div>
+
+      {showJoinConfirm && (
+        <div className="logout-modal-backdrop" role="presentation" onClick={() => setShowJoinConfirm(false)}>
+          <section
+            className="logout-modal adp-join-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="join-confirm-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="join-confirm-title">Xác nhận tham gia?</h2>
+            <p>
+              Sau khi tham gia, bạn <strong>không thể tự hủy</strong>. Hãy chắc chắn bạn có thể tham gia hoạt động này.
+            </p>
+            <div className="logout-modal-actions">
+              <button type="button" className="logout-modal-cancel" onClick={() => setShowJoinConfirm(false)}>
+                Để sau
+              </button>
+              <button type="button" className="logout-modal-confirm" onClick={handleJoin}>
+                Xác nhận tham gia
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }

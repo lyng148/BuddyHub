@@ -5,11 +5,20 @@ import type { Banner, CreateActivityForm, FieldErrors } from '../../types/activi
 
 const CATEGORY_ICONS: Record<string, string> = {
   'Ăn uống': '🍜',
+  'Cà phê': '☕',
   'Học nhóm': '📚',
-  'Board Games': '🎲',
-  'Thể thao': '⚽',
-  'Giao lưu': '💬',
-  Khác: '✨',
+  'Lập trình': '💻',
+  'Tiếng Anh': '🗣️',
+  'Bóng đá': '⚽',
+  'Cầu lông': '🏸',
+  'Gym': '🏋️',
+  'Chạy bộ': '🏃',
+  'Xem phim': '🎬',
+  'Karaoke': '🎤',
+  'Âm nhạc': '🎵',
+  'Cờ vua': '♟️',
+  'Board games': '🎲',
+  'Nhiếp ảnh': '📸',
 }
 
 type CreateActivityScreenProps = {
