@@ -241,6 +241,82 @@ export class ActivitiesService {
     }
   }
 
+  async join(activityId: string, userId: string) {
+    try {
+      const activity = await this.prisma.activity.findUnique({
+        where: { id: activityId },
+        include: {
+          _count: {
+            select: {
+              participants: { where: { status: ParticipantStatus.JOINED } },
+            },
+          },
+        },
+      });
+
+      if (!activity) {
+        throw new NotFoundException('Không tìm thấy hoạt động');
+      }
+
+      const now = new Date();
+      if (now > activity.deadline) {
+        throw this.error();
+      }
+
+      if (
+        activity.status === ActivityStatus.FULL ||
+        activity.status === ActivityStatus.CLOSED ||
+        activity.status === ActivityStatus.CANCELLED ||
+        activity.status === ActivityStatus.FINISHED
+      ) {
+        throw this.error();
+      }
+
+      const currentCount = activity._count.participants;
+      if (currentCount >= activity.maxSlots) {
+        throw this.error();
+      }
+
+      const existing = await this.prisma.activityParticipant.findUnique({
+        where: { activityId_userId: { activityId, userId } },
+      });
+
+      if (existing && existing.status === ParticipantStatus.JOINED) {
+        throw this.error();
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.activityParticipant.upsert({
+          where: { activityId_userId: { activityId, userId } },
+          create: { activityId, userId, status: ParticipantStatus.JOINED },
+          update: {
+            status: ParticipantStatus.JOINED,
+            joinedAt: now,
+            cancelledAt: null,
+          },
+        });
+
+        if (currentCount + 1 >= activity.maxSlots) {
+          await tx.activity.update({
+            where: { id: activityId },
+            data: { status: ActivityStatus.FULL },
+          });
+        }
+      });
+
+      return { message: 'OK', chatLink: activity.chatLink };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException('error');
+    }
+  }
+
   async create(hostId: string, dto: CreateActivityDto) {
     try {
       const input = this.validateCreateActivity(dto);
