@@ -12,6 +12,7 @@ type UserDashboardActivity = {
   currentParticipants: number;
   role: 'host' | 'joined';
   categoryName: string;
+  imageUrl?: string | null;
 };
 
 @Injectable()
@@ -224,6 +225,7 @@ export class UsersService {
       location: string;
       startTime: Date;
       maxSlots: number;
+      imageUrl: string | null;
       category: { name: string };
       _count: { participants: number };
     }, role: 'host' | 'joined'): UserDashboardActivity => ({
@@ -235,6 +237,7 @@ export class UsersService {
       currentParticipants: activity._count.participants,
       role,
       categoryName: activity.category.name,
+      imageUrl: activity.imageUrl,
     });
 
     return {

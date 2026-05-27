@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react'
+import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { getNowDateTimeLocalMin, getTodayDateMin } from '../../lib/validateActivity'
 import { ACTIVITY_CATEGORIES, type ActivityCategory, type Banner, type CreateActivityForm, type FieldErrors } from '../../types/activity'
 
@@ -31,6 +31,27 @@ export function CreateActivityScreen({
   onCancel,
 }: CreateActivityScreenProps) {
   const descriptionCount = form.description.length
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!form.imageFile) {
+      setImagePreviewUrl(null)
+      return
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(form.imageFile)
+    setImagePreviewUrl(nextPreviewUrl)
+
+    return () => URL.revokeObjectURL(nextPreviewUrl)
+  }, [form.imageFile])
+
+  const handleRemoveImage = () => {
+    onChange('imageFile', null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
 
   return (
     <form className="create-form" onSubmit={onSubmit} noValidate>
@@ -105,6 +126,42 @@ export function CreateActivityScreen({
       <section className="create-section">
         <div className="create-section-head">
           <span className="create-section-badge">Bước 3</span>
+          <h2>Hình ảnh</h2>
+        </div>
+
+        <div className="field create-image-field">
+          <span>Ảnh hoạt động (tùy chọn)</span>
+          <label className={`create-image-upload ${imagePreviewUrl ? 'has-preview' : ''}`}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={(e) => onChange('imageFile', e.target.files?.[0] ?? null)}
+              aria-invalid={Boolean(errors.imageFile)}
+            />
+            {imagePreviewUrl ? (
+              <img src={imagePreviewUrl} alt="" />
+            ) : (
+              <span className="create-image-placeholder">
+                <strong>Chọn ảnh</strong>
+                <small>JPG, PNG, WEBP hoặc GIF · tối đa 5MB</small>
+              </span>
+            )}
+          </label>
+          <div className="field-footer">
+            {errors.imageFile ? <small className="field-error">{errors.imageFile}</small> : <span />}
+            {form.imageFile && (
+              <button type="button" className="create-image-remove" onClick={handleRemoveImage}>
+                Gỡ ảnh
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="create-section">
+        <div className="create-section-head">
+          <span className="create-section-badge">Bước 4</span>
           <h2>Thời gian</h2>
         </div>
 
@@ -147,7 +204,7 @@ export function CreateActivityScreen({
 
       <section className="create-section">
         <div className="create-section-head">
-          <span className="create-section-badge">Bước 4</span>
+          <span className="create-section-badge">Bước 5</span>
           <h2>Chi tiết tham gia</h2>
         </div>
 
@@ -237,7 +294,7 @@ export function CreateActivityScreen({
 
       <section className="create-section">
         <div className="create-section-head">
-          <span className="create-section-badge">Bước 5</span>
+          <span className="create-section-badge">Bước 6</span>
           <h2>Mô tả chi tiết</h2>
         </div>
 

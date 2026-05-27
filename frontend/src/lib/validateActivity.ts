@@ -7,6 +7,8 @@ export function hasValidCategory(
 }
 
 const DESCRIPTION_MAX = 500
+const IMAGE_MAX_BYTES = 5 * 1024 * 1024
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 
 function pad2(value: number) {
   return String(value).padStart(2, '0')
@@ -87,6 +89,14 @@ export function validateCreateActivityForm(form: CreateActivityForm): FieldError
 
   if (!form.location.trim()) {
     errors.location = 'Vui lòng nhập địa điểm'
+  }
+
+  if (form.imageFile) {
+    if (!ALLOWED_IMAGE_TYPES.has(form.imageFile.type)) {
+      errors.imageFile = 'Ảnh chỉ hỗ trợ JPG, PNG, WEBP hoặc GIF'
+    } else if (form.imageFile.size > IMAGE_MAX_BYTES) {
+      errors.imageFile = 'Ảnh hoạt động tối đa 5MB'
+    }
   }
 
   if (!form.date) {

@@ -17,6 +17,13 @@
   gap: 22px;
 }
 
+.activity-browse-intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
 .activity-browse-intro h1 {
   margin: 0;
   font-family: var(--heading);
@@ -31,6 +38,29 @@
   font-size: 0.96rem;
   line-height: 1.55;
   max-width: 62ch;
+}
+
+.activity-browse-create-btn {
+  flex: 0 0 auto;
+  min-height: 44px;
+  border: 0;
+  border-radius: 15px;
+  padding: 0 18px;
+  background: linear-gradient(135deg, #ed742d, #de5e24);
+  color: #fff;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 12px 22px rgba(221, 99, 39, 0.22);
+  transition:
+    transform 0.16s ease,
+    filter 0.16s ease;
+}
+
+.activity-browse-create-btn:hover {
+  filter: brightness(1.03);
+  transform: translateY(-1px);
 }
 
 .activity-browse-filters {
@@ -243,6 +273,14 @@
   box-shadow: 0 10px 26px rgba(136, 96, 55, 0.06);
 }
 
+.activity-browse-image {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
+  object-fit: cover;
+  background: #f2ece6;
+}
+
 .activity-browse-card-top {
   display: flex;
   align-items: center;
@@ -377,6 +415,14 @@
 @media (max-width: 640px) {
   .activity-browse-page {
     padding: 14px 12px 32px;
+  }
+
+  .activity-browse-intro {
+    display: grid;
+  }
+
+  .activity-browse-create-btn {
+    width: 100%;
   }
 
   .activity-browse-filters {

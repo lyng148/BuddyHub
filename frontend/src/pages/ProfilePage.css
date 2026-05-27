@@ -406,6 +406,14 @@
   background: #ffe9d6;
 }
 
+.activity-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  object-fit: cover;
+  background: #f2ece6;
+}
+
 .activity-icon.is-joined {
   color: #2b8fa5;
   background: #def7f2;

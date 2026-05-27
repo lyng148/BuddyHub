@@ -19,6 +19,7 @@ export type CreateActivityForm = {
   category: ActivityCategory | ''
   title: string
   location: string
+  imageFile: File | null
   date: string
   startTime: string
   endTime: string
@@ -54,6 +55,7 @@ export type ActivityListItem = {
   description?: string | null
   purpose?: string | null
   host?: ActivityHost
+  imageUrl?: string | null
 }
 
 export type ActivityParticipant = {
@@ -74,6 +76,7 @@ export type ActivityDetail = {
   currentParticipants: number
   gender?: ActivityGender
   description?: string | null
+  imageUrl?: string | null
   host?: ActivityHost
   participants: ActivityParticipant[]
 }

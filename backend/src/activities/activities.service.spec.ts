@@ -12,6 +12,10 @@ describe('ActivitiesService', () => {
     create: jest.fn(),
     findMany: jest.fn(),
   };
+  const cloudinary = {
+    uploadActivityImage: jest.fn(),
+    deleteImage: jest.fn(),
+  };
   const prisma = {
     activityCategory,
     activity,
@@ -42,9 +46,11 @@ describe('ActivitiesService', () => {
     deadline: new Date('2026-05-23T12:00:00.000Z'),
     maxSlots: 6,
     description: 'Grabbing lunch and chatting about anything.',
+    imageUrl: null,
     status: 'OPEN',
     category: { id: 'category-1', name: 'Ăn uống' },
     host: { id: 'user-1', name: 'Alex Chen', avatarUrl: null },
+    interests: [],
     _count: { participants: 3 },
   };
 
@@ -63,7 +69,11 @@ describe('ActivitiesService', () => {
     activityCategory.upsert.mockResolvedValue({ id: 'category-id' });
     activity.create.mockResolvedValue({ id: 'activity-id' });
     activity.findMany.mockResolvedValue([firstActivity, secondActivity]);
-    service = new ActivitiesService(prisma);
+    cloudinary.uploadActivityImage.mockResolvedValue({
+      secureUrl: 'https://res.cloudinary.com/demo/image/upload/activity.jpg',
+      publicId: 'buddyhub/activities/activity',
+    });
+    service = new ActivitiesService(prisma, cloudinary as never);
   });
 
   afterEach(() => {
@@ -186,6 +196,27 @@ describe('ActivitiesService', () => {
         purpose: 'Gặp gỡ bạn mới',
         chatLink: 'https://t.me/buddyhub_group',
         description: 'Mô tả thêm về hoạt động',
+      }),
+    });
+  });
+
+  it('uploads an activity image and stores Cloudinary metadata', async () => {
+    const imageFile = {
+      buffer: Buffer.from('image-bytes'),
+      mimetype: 'image/png',
+      size: 128,
+      originalname: 'poster.png',
+    };
+
+    await expect(
+      service.create('host-id', validDto, imageFile),
+    ).resolves.toEqual({ message: 'OK' });
+
+    expect(cloudinary.uploadActivityImage).toHaveBeenCalledWith(imageFile);
+    expect(activity.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        imageUrl: 'https://res.cloudinary.com/demo/image/upload/activity.jpg',
+        imagePublicId: 'buddyhub/activities/activity',
       }),
     });
   });

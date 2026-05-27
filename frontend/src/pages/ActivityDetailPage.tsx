@@ -97,6 +97,10 @@ export default function ActivityDetailPage({ activityId }: ActivityDetailPagePro
         {!loading && !error && activity && categoryStyle && (
           <article className="activity-detail-card myprofile-card">
             <div className="activity-detail-hero">
+              {activity.imageUrl && (
+                <img src={activity.imageUrl} alt="" className="activity-detail-image" />
+              )}
+
               <span
                 className="activity-detail-category"
                 style={{ background: categoryStyle.bg, color: categoryStyle.color }}

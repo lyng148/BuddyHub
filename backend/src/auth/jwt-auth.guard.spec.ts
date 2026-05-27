@@ -35,6 +35,7 @@ describe('JwtAuthGuard', () => {
     expect(jwt.verify).toHaveBeenCalledWith('access-token');
     expect(request.user).toEqual({
       id: 'user-id',
+      sub: 'user-id',
       email: 'user@sis.hust.edu.vn',
     });
   });

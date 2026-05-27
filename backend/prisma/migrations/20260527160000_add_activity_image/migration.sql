@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Activity"
+ADD COLUMN IF NOT EXISTS "imageUrl" TEXT,
+ADD COLUMN IF NOT EXISTS "imagePublicId" TEXT;
