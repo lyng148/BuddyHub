@@ -1,78 +1,94 @@
-import { type ReactNode, useEffect, useState } from 'react'
-import { fetchActivity } from '../api'
-import { AppNav } from '../components/layout/AppNav'
-import { getApiErrorMessage } from '../lib/errors'
-import { formatActivityDateTime, formatActivityGender, formatActivityTimeRange } from '../lib/formatActivity'
-import { getCategoryStyle } from '../lib/categoryStyle'
-import { navigate } from '../lib/navigation'
-import type { ActivityDetail } from '../types/activity'
-import '../App.css'
-import './ActivityDetailPage.css'
+import { type ReactNode, useEffect, useState } from "react";
+import { fetchActivity } from "../api";
+import { AppNav } from "../components/layout/AppNav";
+import { getApiErrorMessage } from "../lib/errors";
+import {
+  formatActivityDateTime,
+  formatActivityGender,
+  formatActivityTimeRange,
+} from "../lib/formatActivity";
+import { getCategoryStyle } from "../lib/categoryStyle";
+import { navigate } from "../lib/navigation";
+import type { ActivityDetail } from "../types/activity";
+import "../App.css";
+import "./ActivityDetailPage.css";
 
 type ActivityDetailPageProps = {
-  activityId: string
-}
+  activityId: string;
+};
 
 function getDetailSource() {
-  if (typeof window === 'undefined') return 'browse'
-  const params = new URLSearchParams(window.location.search)
-  return params.get('from') === 'my-events' ? 'my-events' : 'browse'
+  if (typeof window === "undefined") return "browse";
+  const params = new URLSearchParams(window.location.search);
+  return params.get("from") === "my-events" ? "my-events" : "browse";
 }
 
 function hostInitial(name?: string) {
-  const char = name?.trim()?.charAt(0)
-  return char ? char.toUpperCase() : '?'
+  const char = name?.trim()?.charAt(0);
+  return char ? char.toUpperCase() : "?";
 }
 
-function DetailSection({ title, children }: { title: string; children: ReactNode }) {
+function DetailSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
   return (
     <section className="activity-detail-section">
       <h2>{title}</h2>
       {children}
     </section>
-  )
+  );
 }
 
-export default function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
-  const [activity, setActivity] = useState<ActivityDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const source = getDetailSource()
+export default function ActivityDetailPage({
+  activityId,
+}: ActivityDetailPageProps) {
+  const [activity, setActivity] = useState<ActivityDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const source = getDetailSource();
 
   useEffect(() => {
-    let alive = true
+    let alive = true;
 
     const load = async () => {
       try {
-        setLoading(true)
-        setError(null)
-        const data = await fetchActivity(activityId)
-        if (!alive) return
-        setActivity(data)
+        setLoading(true);
+        setError(null);
+        const data = await fetchActivity(activityId);
+        if (!alive) return;
+        setActivity(data);
       } catch (err) {
-        if (!alive) return
-        setError(getApiErrorMessage(err, 'Không thể tải chi tiết hoạt động'))
-        setActivity(null)
+        if (!alive) return;
+        setError(getApiErrorMessage(err, "Không thể tải chi tiết hoạt động"));
+        setActivity(null);
       } finally {
         if (alive) {
-          setLoading(false)
+          setLoading(false);
         }
       }
-    }
+    };
 
-    void load()
+    void load();
     return () => {
-      alive = false
-    }
-  }, [activityId])
+      alive = false;
+    };
+  }, [activityId]);
 
   const handleBack = () => {
-    navigate(source === 'my-events' ? '/my-events' : '/activities')
-  }
+    navigate(source === "my-events" ? "/my-events" : "/activities");
+  };
 
-  const categoryStyle = activity ? getCategoryStyle(activity.categoryName) : null
-  const hostDisplayName = activity ? (activity.host?.name ?? 'BuddyHub member') : ''
-  const showJoinButton = source !== 'my-events'
+  const categoryStyle = activity
+    ? getCategoryStyle(activity.categoryName)
+    : null;
+  const hostDisplayName = activity
+    ? (activity.host?.name ?? "BuddyHub member")
+    : "";
+  const showJoinButton = source !== "my-events";
 
   return (
     <div className="activity-detail-page">
@@ -80,13 +96,19 @@ export default function ActivityDetailPage({ activityId }: ActivityDetailPagePro
       <div className="auth-orb auth-orb-two" aria-hidden />
 
       <div className="activity-detail-frame">
-        <AppNav active={source === 'my-events' ? 'profile' : 'activities'} />
+        <AppNav active={source === "my-events" ? "profile" : "activities"} />
 
-        <button type="button" className="activity-detail-back" onClick={handleBack}>
+        <button
+          type="button"
+          className="activity-detail-back"
+          onClick={handleBack}
+        >
           ← Quay lại
         </button>
 
-        {loading && <div className="activity-detail-status">Đang tải chi tiết…</div>}
+        {loading && (
+          <div className="activity-detail-status">Đang tải chi tiết…</div>
+        )}
 
         {error && !loading && (
           <div className="activity-detail-error" role="alert">
@@ -99,7 +121,10 @@ export default function ActivityDetailPage({ activityId }: ActivityDetailPagePro
             <div className="activity-detail-hero">
               <span
                 className="activity-detail-category"
-                style={{ background: categoryStyle.bg, color: categoryStyle.color }}
+                style={{
+                  background: categoryStyle.bg,
+                  color: categoryStyle.color,
+                }}
               >
                 {activity.categoryName}
               </span>
@@ -122,16 +147,25 @@ export default function ActivityDetailPage({ activityId }: ActivityDetailPagePro
                         onClick={() => navigate(`/users/${activity.host!.id}`)}
                       >
                         {activity.host.avatarUrl ? (
-                          <img src={activity.host.avatarUrl} alt="" className="activity-detail-host-avatar" />
+                          <img
+                            src={activity.host.avatarUrl}
+                            alt=""
+                            className="activity-detail-host-avatar"
+                          />
                         ) : (
-                          <span className="activity-detail-host-avatar activity-detail-host-avatar-fallback" aria-hidden>
+                          <span
+                            className="activity-detail-host-avatar activity-detail-host-avatar-fallback"
+                            aria-hidden
+                          >
                             {hostInitial(hostDisplayName)}
                           </span>
                         )}
                         <span>{hostDisplayName}</span>
                       </button>
                     ) : (
-                      <span className="activity-detail-host-row-fallback">{hostDisplayName}</span>
+                      <span className="activity-detail-host-row-fallback">
+                        {hostDisplayName}
+                      </span>
                     )}
                   </dd>
                 </div>
@@ -139,26 +173,34 @@ export default function ActivityDetailPage({ activityId }: ActivityDetailPagePro
             </DetailSection>
 
             <DetailSection title="Thời gian">
-              <p className="activity-detail-text">{formatActivityTimeRange(activity.startTime, activity.endTime)}</p>
+              <p className="activity-detail-text">
+                {formatActivityTimeRange(activity.startTime, activity.endTime)}
+              </p>
             </DetailSection>
 
             <DetailSection title="Hạn đăng ký">
-              <p className="activity-detail-text">{formatActivityDateTime(activity.deadline)}</p>
+              <p className="activity-detail-text">
+                {formatActivityDateTime(activity.deadline)}
+              </p>
             </DetailSection>
 
             <DetailSection title="Yêu cầu về giới tính">
-              <p className="activity-detail-text">{formatActivityGender(activity.gender)}</p>
+              <p className="activity-detail-text">
+                {formatActivityGender(activity.gender)}
+              </p>
             </DetailSection>
 
             <DetailSection title="Mục đích">
-              <p className="activity-detail-text">{activity.purpose?.trim() || '—'}</p>
+              <p className="activity-detail-text">
+                {activity.purpose?.trim() || "—"}
+              </p>
             </DetailSection>
 
             <DetailSection title="Người tham gia">
               <p className="activity-detail-participant-count">
                 <strong>
                   {activity.currentParticipants}/{activity.maxSlots}
-                </strong>{' '}
+                </strong>{" "}
                 người đã tham gia
               </p>
 
@@ -173,7 +215,9 @@ export default function ActivityDetailPage({ activityId }: ActivityDetailPagePro
                         className="activity-detail-participant-link"
                         onClick={() => navigate(`/users/${participant.id}`)}
                       >
-                        <span className="activity-detail-participant-name">{participant.name}</span>
+                        <span className="activity-detail-participant-name">
+                          {participant.name}
+                        </span>
                       </button>
                     </li>
                   ))}
@@ -183,7 +227,9 @@ export default function ActivityDetailPage({ activityId }: ActivityDetailPagePro
 
             {activity.description?.trim() && (
               <DetailSection title="Mô tả chi tiết">
-                <p className="activity-detail-text activity-detail-description">{activity.description.trim()}</p>
+                <p className="activity-detail-text activity-detail-description">
+                  {activity.description.trim()}
+                </p>
               </DetailSection>
             )}
 
@@ -206,5 +252,5 @@ export default function ActivityDetailPage({ activityId }: ActivityDetailPagePro
         )}
       </div>
     </div>
-  )
+  );
 }
