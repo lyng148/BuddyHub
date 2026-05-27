@@ -5,6 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ActivityStatus, Gender, ParticipantStatus, Prisma } from '@prisma/client';
+import {
+  CloudinaryService,
+  type UploadableImageFile,
+  type UploadedCloudinaryImage,
+} from '../cloudinary/cloudinary.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { GetActivitiesQueryDto } from './dto/get-activities-query.dto';
@@ -95,7 +100,10 @@ type ActivityListItem = Prisma.ActivityGetPayload<{
 
 @Injectable()
 export class ActivitiesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
 
   async findOne(id: string) {
     try {
@@ -146,6 +154,7 @@ export class ActivitiesService {
         maxSlots: activity.maxSlots,
         currentParticipants: participants.length,
         description: activity.description,
+        imageUrl: activity.imageUrl,
         status: activity.status,
         gender: activity.gender,
         chatLink: activity.chatLink,
@@ -344,7 +353,12 @@ export class ActivitiesService {
     }
   }
 
-  async create(hostId: string, dto: CreateActivityDto) {
+  async create(
+    hostId: string,
+    dto: CreateActivityDto,
+    imageFile?: UploadableImageFile,
+  ) {
+    let uploadedImage: UploadedCloudinaryImage | undefined;
     try {
       const input = this.validateCreateActivity(dto);
 
@@ -364,6 +378,11 @@ export class ActivitiesService {
         create: { name: input.categoryName },
       });
 
+      if (imageFile) {
+        uploadedImage =
+          await this.cloudinaryService.uploadActivityImage(imageFile);
+      }
+
       await this.prisma.activity.create({
         data: {
           hostId,
@@ -377,6 +396,12 @@ export class ActivitiesService {
           deadline: input.deadline,
           chatLink: input.chatLink,
           description: input.description,
+          ...(uploadedImage
+            ? {
+                imageUrl: uploadedImage.secureUrl,
+                imagePublicId: uploadedImage.publicId,
+              }
+            : {}),
           gender: input.gender,
           interests:
             input.interestIds.length > 0
@@ -391,7 +416,14 @@ export class ActivitiesService {
 
       return { message: 'OK' };
     } catch (error) {
-      if (error instanceof BadRequestException) {
+      if (uploadedImage) {
+        await this.tryDeleteUploadedImage(uploadedImage.publicId);
+      }
+
+      if (
+        error instanceof BadRequestException ||
+        error instanceof InternalServerErrorException
+      ) {
         throw error;
       }
 
@@ -433,6 +465,7 @@ export class ActivitiesService {
         maxSlots: activity.maxSlots,
         currentParticipants: activity._count.participants,
         description: activity.description,
+        imageUrl: activity.imageUrl,
         status: activity.status,
         gender: activity.gender,
         interests: activity.interests.map((item) => ({
@@ -454,6 +487,14 @@ export class ActivitiesService {
       if (second.distanceKm === null) return -1;
       return first.distanceKm - second.distanceKm;
     });
+  }
+
+  private async tryDeleteUploadedImage(publicId: string) {
+    try {
+      await this.cloudinaryService.deleteImage(publicId);
+    } catch {
+      // Keep the original create error; a cleanup failure should not mask it.
+    }
   }
 
   private validateCreateActivity(

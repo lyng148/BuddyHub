@@ -3,6 +3,7 @@ import { fetchActivities } from '../api'
 import { ActivityBrowseCard } from '../components/activities/ActivityBrowseCard'
 import { AppNav } from '../components/layout/AppNav'
 import { getApiErrorMessage } from '../lib/errors'
+import { navigate } from '../lib/navigation'
 import { ACTIVITY_CATEGORIES } from '../types/activity'
 import type { ActivityListItem } from '../types/activity'
 import '../App.css'
@@ -83,8 +84,13 @@ export default function ActivityListPage() {
         <AppNav active="activities" />
 
         <div className="activity-browse-intro">
-          <h1>Hoạt động có thể tham gia</h1>
-          <p>Khám phá các hoạt động do sinh viên HUST tạo và tham gia cùng nhóm phù hợp với bạn.</p>
+          <div>
+            <h1>Hoạt động có thể tham gia</h1>
+            <p>Khám phá các hoạt động do sinh viên HUST tạo và tham gia cùng nhóm phù hợp với bạn.</p>
+          </div>
+          <button type="button" className="activity-browse-create-btn" onClick={() => navigate('/activities/new')}>
+            + Tạo hoạt động
+          </button>
         </div>
 
         <section className="activity-browse-filters" aria-label="Bộ lọc hoạt động">

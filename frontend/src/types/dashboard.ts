@@ -7,6 +7,7 @@ export type DashboardActivity = {
   currentParticipants: number
   role: 'host' | 'joined'
   categoryName: string
+  imageUrl?: string | null
 }
 
 export type DashboardResponse = {

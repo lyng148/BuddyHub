@@ -108,7 +108,11 @@ export default function MyEventsPage() {
                     className="activity-item my-events-item"
                     onClick={() => navigate(`/activities/${activity.id}?from=my-events`)}
                   >
-                    <div className={`activity-icon ${roleClass(activity.role)}`}>▣</div>
+                    {activity.imageUrl ? (
+                      <img src={activity.imageUrl} alt="" className="activity-thumb" loading="lazy" />
+                    ) : (
+                      <div className={`activity-icon ${roleClass(activity.role)}`}>▣</div>
+                    )}
                     <div className="activity-content">
                       <h4>{activity.title}</h4>
                       <p>

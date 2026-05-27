@@ -322,7 +322,11 @@ export default function ProfilePage() {
           ) : (
             visibleActivities.map((activity) => (
               <article key={activity.id} className="activity-item">
-                <div className={`activity-icon ${roleClass(activity.role)}`}>▣</div>
+                {activity.imageUrl ? (
+                  <img src={activity.imageUrl} alt="" className="activity-thumb" loading="lazy" />
+                ) : (
+                  <div className={`activity-icon ${roleClass(activity.role)}`}>▣</div>
+                )}
                 <div className="activity-content">
                   <h4>{activity.title}</h4>
                   <p>

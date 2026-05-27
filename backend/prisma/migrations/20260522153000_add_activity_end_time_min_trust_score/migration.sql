@@ -1,0 +1,3 @@
+-- Intentionally left as a no-op.
+-- This migration directory existed without SQL; keeping this file lets Prisma
+-- traverse the migration history consistently.

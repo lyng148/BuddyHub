@@ -46,6 +46,15 @@
   box-shadow: 0 8px 20px rgba(136, 96, 55, 0.08);
 }
 
+.activity-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  object-fit: cover;
+  background: #f2ece6;
+  flex: 0 0 auto;
+}
+
 .my-events-category {
   color: #e6762e;
   font-weight: 700;

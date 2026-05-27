@@ -24,6 +24,10 @@ export function ActivityBrowseCard({ activity }: ActivityBrowseCardProps) {
 
   return (
     <article className="activity-browse-card">
+      {activity.imageUrl && (
+        <img src={activity.imageUrl} alt="" className="activity-browse-image" loading="lazy" />
+      )}
+
       <div className="activity-browse-card-top">
         <span
           className="activity-browse-category"

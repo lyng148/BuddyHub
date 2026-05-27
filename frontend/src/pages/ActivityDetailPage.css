@@ -69,6 +69,14 @@
   gap: 12px;
 }
 
+.activity-detail-image {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 18px;
+  object-fit: cover;
+  background: #f2ece6;
+}
+
 .activity-detail-category {
   justify-self: start;
   padding: 5px 10px;

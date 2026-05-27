@@ -187,6 +187,8 @@ model Activity {
   maxSlots    Int       // Số người tối đa
   chatLink    String?   // Link nhóm Telegram/Zalo để liên lạc sau khi tham gia
   description String?   // Mô tả chi tiết
+  imageUrl    String?   // Ảnh đại diện hoạt động đã upload lên Cloudinary
+  imagePublicId String? // Public ID trên Cloudinary để xóa/thay thế về sau
   gender      Gender         @default(ALL) // Giới hạn giới tính tham gia
   status      ActivityStatus @default(OPEN)
 

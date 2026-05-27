@@ -98,10 +98,12 @@ export async function getPublicProfile(userId: string) {
   const response = await api.get(`/users/${userId}/profile`);
   return response.data;
 }
+
 export type CreateActivityPayload = {
   type: ActivityCategory;
   name: string;
   location: string;
+  image?: File;
   date: string;
   start: string;
   end?: string;
@@ -114,7 +116,21 @@ export type CreateActivityPayload = {
 };
 
 export async function createActivity(payload: CreateActivityPayload) {
-  const response = await api.post("/activities", payload);
+  const { image, ...fields } = payload;
+  if (!image) {
+    const response = await api.post("/activities", fields);
+    return response.data;
+  }
+
+  const formData = new FormData();
+  Object.entries(fields).forEach(([key, value]) => {
+    if (value !== undefined) {
+      formData.append(key, String(value));
+    }
+  });
+  formData.append("image", image);
+
+  const response = await api.post("/activities", formData);
   return response.data;
 }
 
