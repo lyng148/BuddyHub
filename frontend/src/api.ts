@@ -20,6 +20,16 @@ type VerifyOtpPayload = {
   otp: string;
 };
 
+type ForgotPasswordPayload = {
+  email: string;
+};
+
+type ResetPasswordPayload = {
+  email: string;
+  otp: string;
+  newPassword: string;
+};
+
 type RegisterPayload = {
   name: string;
   password: string;
@@ -81,6 +91,16 @@ export async function verifyOtp(payload: VerifyOtpPayload) {
 export async function registerUser(payload: RegisterPayload) {
   const response = await api.post("/auth/register", payload);
   return response.data;
+}
+
+export async function forgotPassword(payload: ForgotPasswordPayload) {
+  const response = await api.post('/auth/forgot-password', payload)
+  return response.data as { message: string }
+}
+
+export async function resetPassword(payload: ResetPasswordPayload) {
+  const response = await api.post('/auth/reset-password', payload)
+  return response.data as { message: string }
 }
 
 export async function getMe(options?: AuthHeaderOptions) {

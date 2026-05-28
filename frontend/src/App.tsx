@@ -39,6 +39,16 @@ function isProtectedPath(pathname: string) {
   );
 }
 
+function shouldRedirectAuthenticatedUser(pathname: string) {
+  if (pathname === "/") return true;
+  if (pathname === "/auth") return true;
+  if (pathname === "/auth/login") return true;
+  if (pathname === "/auth/register") return true;
+  if (pathname === "/auth/verify") return true;
+  if (pathname === "/auth/profile") return true;
+  return false;
+}
+
 function ProtectedRouteRedirect() {
   useEffect(() => {
     setAuthRedirectMessage(protectedRouteMessage);
@@ -92,7 +102,7 @@ function App() {
   useEffect(() => {
     clearExpiredAccessToken();
 
-    if (!(pathname === "/" || pathname.startsWith("/auth")) || !isAccessTokenValid()) {
+    if (!shouldRedirectAuthenticatedUser(pathname) || !isAccessTokenValid()) {
       return;
     }
 

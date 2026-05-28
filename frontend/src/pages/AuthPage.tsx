@@ -1,7 +1,9 @@
 import { type ClipboardEvent, type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from 'react'
 import {
   fetchInterests,
+  forgotPassword,
   login,
+  resetPassword,
   registerUser,
   sendOtp,
   uploadUserAvatar,
@@ -13,6 +15,7 @@ import { getApiErrorMessage } from '../lib/errors'
 import '../App.css'
 
 import { LoginScreen } from '../components/auth/LoginScreen'
+import { ForgotPasswordScreen } from '../components/auth/ForgotPasswordScreen'
 import { ProfileScreen } from '../components/auth/ProfileScreen'
 import { RegisterScreen } from '../components/auth/RegisterScreen'
 import { VerifyScreen } from '../components/auth/VerifyScreen'
@@ -91,7 +94,7 @@ function getInitialScreen(): Screen {
     const path = typeof window !== 'undefined' ? window.location.pathname : ''
     if (path.startsWith('/auth/')) {
       const maybe = path.split('/')[2]
-      if (maybe === 'login' || maybe === 'register' || maybe === 'verify' || maybe === 'profile') {
+      if (maybe === 'login' || maybe === 'register' || maybe === 'verify' || maybe === 'profile' || maybe === 'forgot') {
         return maybe as Screen
       }
     }
@@ -114,9 +117,18 @@ export default function AuthPage() {
   const [loginForm, setLoginForm] = useState<LoginForm>(loginDefaults)
   const [registerForm, setRegisterForm] = useState<RegisterForm>(registerDefaults)
   const [completeProfileForm, setCompleteProfileForm] = useState<CompleteProfileForm>(completeProfileDefaults)
+  const [forgotForm, setForgotForm] = useState({
+    email: '',
+    otp: '',
+    newPassword: '',
+    confirmPassword: '',
+  })
   const [loginErrors, setLoginErrors] = useState<FieldErrors<keyof LoginForm>>({})
   const [registerErrors, setRegisterErrors] = useState<FieldErrors<'email'>>({})
   const [completeProfileErrors, setCompleteProfileErrors] = useState<FieldErrors<keyof CompleteProfileForm>>({})
+  const [forgotErrors, setForgotErrors] = useState<
+    FieldErrors<'email' | 'otp' | 'newPassword' | 'confirmPassword'>
+  >({})
   const [otpDigits, setOtpDigits] = useState<string[]>(Array.from({ length: otpLength }, () => ''))
   const [banner, setBanner] = useState<Banner>(() => {
     if (getInitialScreen() !== 'login') {
@@ -133,6 +145,8 @@ export default function AuthPage() {
   const [verifyLoading, setVerifyLoading] = useState(false)
   const [resendLoading, setResendLoading] = useState(false)
   const [profileLoading, setProfileLoading] = useState(false)
+  const [forgotOtpLoading, setForgotOtpLoading] = useState(false)
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false)
   const [pendingRegistration, setPendingRegistration] = useState<RegistrationSession | null>(() => {
     try {
       const raw = sessionStorage.getItem('pending_registration')
@@ -243,6 +257,9 @@ export default function AuthPage() {
           if (maybe === 'login' || maybe === 'register' || maybe === 'verify' || maybe === 'profile') {
             setScreen(maybe as Screen)
           }
+          if (maybe === 'forgot') {
+            setScreen(maybe as Screen)
+          }
         }
       } catch {
         return
@@ -272,6 +289,16 @@ export default function AuthPage() {
   const updateRegisterField = (value: string) => {
     setRegisterForm({ email: value })
     setRegisterErrors({})
+    setBanner(null)
+  }
+
+  const updateForgotField = (
+    field: 'email' | 'otp' | 'newPassword' | 'confirmPassword',
+    value: string,
+  ) => {
+    const sanitizedValue = field === 'otp' ? value.replace(/\D/g, '').slice(0, otpLength) : value
+    setForgotForm((current) => ({ ...current, [field]: sanitizedValue }))
+    setForgotErrors((current) => ({ ...current, [field]: undefined }))
     setBanner(null)
   }
 
@@ -332,6 +359,110 @@ export default function AuthPage() {
       setBanner({ tone: 'error', text: getApiErrorMessage(error, 'Đăng nhập thất bại') })
     } finally {
       setLoginLoading(false)
+    }
+  }
+
+  const handleGoForgotPassword = () => {
+    setForgotForm((current) => ({
+      ...current,
+      email: normalizeEmail(loginForm.email),
+    }))
+    setForgotErrors({})
+    setBanner(null)
+    setScreen('forgot')
+  }
+
+  const handleSendForgotOtp = async () => {
+    const email = normalizeEmail(forgotForm.email)
+
+    if (!email) {
+      setForgotErrors({ email: 'Vui lòng nhập email HUST' })
+      return
+    }
+
+    if (!isHustEmail(email)) {
+      setForgotErrors({ email: 'Email HUST không đúng định dạng' })
+      return
+    }
+
+    setForgotOtpLoading(true)
+    setBanner(null)
+    setForgotErrors((current) => ({ ...current, email: undefined }))
+
+    try {
+      await forgotPassword({ email })
+      setForgotForm((current) => ({ ...current, email }))
+      setBanner({ tone: 'success', text: 'Đã gửi OTP về email của bạn. Vui lòng kiểm tra hộp thư.' })
+    } catch (error) {
+      setBanner({ tone: 'error', text: getApiErrorMessage(error, 'Không thể gửi OTP đặt lại mật khẩu') })
+    } finally {
+      setForgotOtpLoading(false)
+    }
+  }
+
+  const handleForgotSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    const nextErrors: FieldErrors<'email' | 'otp' | 'newPassword' | 'confirmPassword'> = {}
+    const email = normalizeEmail(forgotForm.email)
+    const otp = forgotForm.otp.trim()
+    const newPassword = forgotForm.newPassword
+    const confirmPassword = forgotForm.confirmPassword
+
+    if (!email) {
+      nextErrors.email = 'Vui lòng nhập email HUST'
+    } else if (!isHustEmail(email)) {
+      nextErrors.email = 'Email HUST không đúng định dạng'
+    }
+
+    if (!otp) {
+      nextErrors.otp = 'Vui lòng nhập OTP'
+    } else if (!/^\d{6}$/.test(otp)) {
+      nextErrors.otp = 'OTP phải đúng 6 chữ số'
+    }
+
+    if (!newPassword.trim()) {
+      nextErrors.newPassword = 'Vui lòng nhập mật khẩu mới'
+    } else if (newPassword.length < 8) {
+      nextErrors.newPassword = 'Mật khẩu phải có ít nhất 8 ký tự'
+    } else if (!passwordPolicyRegex.test(newPassword)) {
+      nextErrors.newPassword = 'Mật khẩu phải có ít nhất 1 chữ hoa và 1 chữ số'
+    }
+
+    if (!confirmPassword.trim()) {
+      nextErrors.confirmPassword = 'Vui lòng nhập lại mật khẩu mới'
+    } else if (confirmPassword !== newPassword) {
+      nextErrors.confirmPassword = 'Mật khẩu nhập lại không khớp'
+    }
+
+    setForgotErrors(nextErrors)
+    if (Object.keys(nextErrors).length > 0) {
+      return
+    }
+
+    setResetPasswordLoading(true)
+    setBanner(null)
+
+    try {
+      await resetPassword({
+        email,
+        otp,
+        newPassword,
+      })
+      setForgotErrors({})
+      setForgotForm({
+        email,
+        otp: '',
+        newPassword: '',
+        confirmPassword: '',
+      })
+      setLoginForm((current) => ({ ...current, email }))
+      setBanner({ tone: 'success', text: 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập ngay.' })
+      setScreen('login')
+    } catch (error) {
+      setBanner({ tone: 'error', text: getApiErrorMessage(error, 'Đặt lại mật khẩu thất bại') })
+    } finally {
+      setResetPasswordLoading(false)
     }
   }
 
@@ -715,6 +846,22 @@ export default function AuthPage() {
                 onChange={updateLoginField}
                 onSubmit={handleLoginSubmit}
                 onGoRegister={() => setScreen('register')}
+                onGoForgotPassword={handleGoForgotPassword}
+              />
+            )}
+
+            {screen === 'forgot' && (
+              <ForgotPasswordScreen
+                form={forgotForm}
+                errors={forgotErrors}
+                banner={banner}
+                sendingOtp={forgotOtpLoading}
+                resettingPassword={resetPasswordLoading}
+                canSendOtp={isHustEmail(forgotForm.email)}
+                onChange={updateForgotField}
+                onSendOtp={handleSendForgotOtp}
+                onSubmit={handleForgotSubmit}
+                onGoLogin={() => setScreen('login')}
               />
             )}
 

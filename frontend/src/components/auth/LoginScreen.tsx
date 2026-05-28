@@ -11,6 +11,7 @@ type LoginScreenProps = {
   onChange: (field: keyof LoginForm, value: string) => void
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
   onGoRegister: () => void
+  onGoForgotPassword: () => void
 }
 
 export function LoginScreen({
@@ -21,6 +22,7 @@ export function LoginScreen({
   onChange,
   onSubmit,
   onGoRegister,
+  onGoForgotPassword,
 }: LoginScreenProps) {
   const [showPassword, setShowPassword] = useState(false)
 
@@ -80,6 +82,12 @@ export function LoginScreen({
         <button className="primary-button" type="submit" disabled={loading}>
           {loading ? <ButtonSpinner label="Đang đăng nhập..." /> : 'Đăng nhập'}
         </button>
+
+        <p className="auth-switch auth-switch-secondary">
+          <button className="text-link-button" type="button" onClick={onGoForgotPassword}>
+            Quên mật khẩu?
+          </button>
+        </p>
 
         <p className="auth-switch">
           <span>Chưa có tài khoản? </span>

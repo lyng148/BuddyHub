@@ -56,7 +56,8 @@
 .auth-page-login .brand-bar,
 .auth-page-register .brand-bar,
 .auth-page-verify .brand-bar,
-.auth-page-profile .brand-bar {
+.auth-page-profile .brand-bar,
+.auth-page-forgot .brand-bar {
   position: fixed;
   top: 20px;
   left: 50%;
@@ -68,7 +69,8 @@
 .auth-page-login .auth-frame,
 .auth-page-register .auth-frame,
 .auth-page-verify .auth-frame,
-.auth-page-profile .auth-frame {
+.auth-page-profile .auth-frame,
+.auth-page-forgot .auth-frame {
   padding-top: 88px;
 }
 
@@ -167,7 +169,8 @@
 .auth-card-login,
 .auth-card-register,
 .auth-card-verify,
-.auth-card-profile {
+.auth-card-profile,
+.auth-card-forgot {
   min-height: 560px;
   padding: 32px 30px 28px;
 }
@@ -207,6 +210,11 @@
 .screen-icon-profile {
   color: #d06d27;
   background: #ffeacc;
+}
+
+.screen-icon-forgot {
+  color: #5f53c8;
+  background: #ebe8ff;
 }
 
 .card-title-block {
@@ -520,6 +528,10 @@
   font-size: 0.92rem;
 }
 
+.auth-switch-secondary {
+  margin-top: -2px;
+}
+
 .text-link-button {
   border: 0;
   background: transparent;
@@ -540,6 +552,21 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.forgot-otp-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.forgot-otp-button {
+  min-height: 44px;
+  align-self: end;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: #fff4ed;
 }
 
 .text-button-left,
@@ -1117,7 +1144,8 @@ fieldset:last-of-type {
   .auth-page-login .brand-bar,
   .auth-page-register .brand-bar,
   .auth-page-verify .brand-bar,
-  .auth-page-profile .brand-bar {
+  .auth-page-profile .brand-bar,
+  .auth-page-forgot .brand-bar {
     top: 16px;
     width: min(calc(100% - 28px), 1120px);
   }
@@ -1125,7 +1153,8 @@ fieldset:last-of-type {
   .auth-page-login .auth-frame,
   .auth-page-register .auth-frame,
   .auth-page-verify .auth-frame,
-  .auth-page-profile .auth-frame {
+  .auth-page-profile .auth-frame,
+  .auth-page-forgot .auth-frame {
     padding-top: 78px;
   }
 
