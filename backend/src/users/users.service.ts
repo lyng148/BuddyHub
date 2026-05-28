@@ -47,12 +47,10 @@ export class UsersService {
       throw new BadRequestException('error');
     }
 
-    const [hostedCount, joinedCount] = await Promise.all([
-      this.prisma.activity.count({ where: { hostId: userId } }),
-      this.prisma.activityParticipant.count({
-        where: { userId, status: 'JOINED' },
-      }),
-    ]);
+    const hostedCount = await this.prisma.activity.count({ where: { hostId: userId } });
+    const joinedCount = await this.prisma.activityParticipant.count({
+      where: { userId, status: 'JOINED' },
+    });
 
     return {
       message: 'OK',
@@ -198,64 +196,62 @@ export class UsersService {
 
     const now = new Date();
 
-    const [hostedUpcoming, joinedUpcoming, hostedHistory, joinedHistory, hostedCount, joinedCount] = await Promise.all([
-      this.prisma.activity.findMany({
-        where: {
-          hostId: userId,
-          status: { notIn: [ActivityStatus.CANCELLED, ActivityStatus.FINISHED] },
-          startTime: { gte: now },
-        },
-        include: {
-          category: { select: { name: true } },
-          _count: { select: { participants: { where: { status: ParticipantStatus.JOINED } } } },
-        },
-        orderBy: { startTime: 'asc' },
-      }),
-      this.prisma.activity.findMany({
-        where: {
-          hostId: { not: userId },
-          status: { notIn: [ActivityStatus.CANCELLED, ActivityStatus.FINISHED] },
-          startTime: { gte: now },
-          participants: { some: { userId, status: ParticipantStatus.JOINED } },
-        },
-        include: {
-          category: { select: { name: true } },
-          _count: { select: { participants: { where: { status: ParticipantStatus.JOINED } } } },
-        },
-        orderBy: { startTime: 'asc' },
-      }),
-      this.prisma.activity.findMany({
-        where: {
-          hostId: userId,
-          OR: [
-            { status: { in: [ActivityStatus.CANCELLED, ActivityStatus.FINISHED] } },
-            { startTime: { lt: now } },
-          ],
-        },
-        include: {
-          category: { select: { name: true } },
-          _count: { select: { participants: { where: { status: ParticipantStatus.JOINED } } } },
-        },
-        orderBy: { startTime: 'desc' },
-      }),
-      this.prisma.activity.findMany({
-        where: {
-          hostId: { not: userId },
-          participants: { some: { userId, status: ParticipantStatus.JOINED } },
-          OR: [
-            { status: { in: [ActivityStatus.CANCELLED, ActivityStatus.FINISHED] } },
-            { startTime: { lt: now } },
-          ],
-        },
-        include: {
-          category: { select: { name: true } },
-          _count: { select: { participants: { where: { status: ParticipantStatus.JOINED } } } },
-        },
-        orderBy: { startTime: 'desc' },
-      }),
-      this.prisma.activity.count({ where: { hostId: userId } }),
-      this.prisma.activityParticipant.count({ where: { userId, status: ParticipantStatus.JOINED } }),
-    ]);
+    const hostedUpcoming = await this.prisma.activity.findMany({
+      where: {
+        hostId: userId,
+        status: { notIn: [ActivityStatus.CANCELLED, ActivityStatus.FINISHED] },
+        startTime: { gte: now },
+      },
+      include: {
+        category: { select: { name: true } },
+        _count: { select: { participants: { where: { status: ParticipantStatus.JOINED } } } },
+      },
+      orderBy: { startTime: 'asc' },
+    });
+    const joinedUpcoming = await this.prisma.activity.findMany({
+      where: {
+        hostId: { not: userId },
+        status: { notIn: [ActivityStatus.CANCELLED, ActivityStatus.FINISHED] },
+        startTime: { gte: now },
+        participants: { some: { userId, status: ParticipantStatus.JOINED } },
+      },
+      include: {
+        category: { select: { name: true } },
+        _count: { select: { participants: { where: { status: ParticipantStatus.JOINED } } } },
+      },
+      orderBy: { startTime: 'asc' },
+    });
+    const hostedHistory = await this.prisma.activity.findMany({
+      where: {
+        hostId: userId,
+        OR: [
+          { status: { in: [ActivityStatus.CANCELLED, ActivityStatus.FINISHED] } },
+          { startTime: { lt: now } },
+        ],
+      },
+      include: {
+        category: { select: { name: true } },
+        _count: { select: { participants: { where: { status: ParticipantStatus.JOINED } } } },
+      },
+      orderBy: { startTime: 'desc' },
+    });
+    const joinedHistory = await this.prisma.activity.findMany({
+      where: {
+        hostId: { not: userId },
+        participants: { some: { userId, status: ParticipantStatus.JOINED } },
+        OR: [
+          { status: { in: [ActivityStatus.CANCELLED, ActivityStatus.FINISHED] } },
+          { startTime: { lt: now } },
+        ],
+      },
+      include: {
+        category: { select: { name: true } },
+        _count: { select: { participants: { where: { status: ParticipantStatus.JOINED } } } },
+      },
+      orderBy: { startTime: 'desc' },
+    });
+    const hostedCount = await this.prisma.activity.count({ where: { hostId: userId } });
+    const joinedCount = await this.prisma.activityParticipant.count({ where: { userId, status: ParticipantStatus.JOINED } });
 
     const mapActivity = (activity: {
       id: string;
