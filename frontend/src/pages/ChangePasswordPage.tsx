@@ -89,6 +89,9 @@ export default function ChangePasswordPage() {
               <h1>Đổi mật khẩu</h1>
               <p>Nhập mật khẩu hiện tại và mật khẩu mới để cập nhật tài khoản của bạn.</p>
             </div>
+            <button type="button" className="text-link-button password-page-forgot-link" onClick={() => navigate('/auth/forgot')}>
+              Quên mật khẩu hiện tại?
+            </button>
           </div>
 
           <div className="password-page-form">

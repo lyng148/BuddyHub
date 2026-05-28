@@ -1,4 +1,4 @@
-export type Screen = 'login' | 'register' | 'verify' | 'profile'
+export type Screen = 'login' | 'register' | 'verify' | 'profile' | 'forgot'
 
 export type LoginForm = {
   email: string
