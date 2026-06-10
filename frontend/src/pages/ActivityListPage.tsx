@@ -1,5 +1,5 @@
-import { useDeferredValue, useEffect, useState } from 'react'
-import { fetchActivities, fetchCategories, getDashboard } from '../api'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { fetchActivities, fetchCategories, getDashboard, getMe } from '../api'
 import { ActivityBrowseCard } from '../components/activities/ActivityBrowseCard'
 import { LoadingState } from '../components/common/LoadingState'
 import { AppNav } from '../components/layout/AppNav'
@@ -10,13 +10,6 @@ import type { ActivityListItem } from '../types/activity'
 import type { DashboardResponse } from '../types/dashboard'
 import '../App.css'
 import './ActivityListPage.css'
-
-const TIME_FILTER_OPTIONS = [
-  { value: '', label: 'Tất cả thời gian' },
-  { value: 'today', label: 'Hôm nay' },
-  { value: 'tomorrow', label: 'Ngày mai' },
-  { value: 'this_week', label: 'Tuần này' },
-] as const
 
 function SearchIcon() {
   return (
@@ -29,20 +22,56 @@ function SearchIcon() {
   )
 }
 
+function isUnavailableActivity(activity: ActivityListItem, userGender?: string | null) {
+  if (activity.status === 'FINISHED' || activity.status === 'CANCELLED' || activity.status === 'CLOSED') {
+    return true
+  }
+
+  if (activity.status === 'FULL' || activity.currentParticipants >= activity.maxSlots) {
+    return true
+  }
+
+  if (activity.deadline && new Date() > new Date(activity.deadline)) {
+    return true
+  }
+
+  return Boolean(activity.gender && activity.gender !== 'ALL' && userGender && userGender !== activity.gender)
+}
+
 export default function ActivityListPage() {
   const [activities, setActivities] = useState<ActivityListItem[]>([])
   const [keyword, setKeyword] = useState('')
   const [category, setCategory] = useState('')
-  const [time, setTime] = useState('')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
+  const [gender, setGender] = useState('')
   const [matchMyInterests, setMatchMyInterests] = useState(false)
   const [myInterests, setMyInterests] = useState<string[]>([])
   const [myInterestsLoading, setMyInterestsLoading] = useState(false)
   const [categories, setCategories] = useState<string[]>([])
+  const [userGender, setUserGender] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const deferredKeyword = useDeferredValue(keyword)
+  const sortedActivities = useMemo(
+    () =>
+      activities
+        .map((activity, index) => ({ activity, index }))
+        .sort((first, second) => {
+          const firstUnavailable = isUnavailableActivity(first.activity, userGender)
+          const secondUnavailable = isUnavailableActivity(second.activity, userGender)
 
-  const hasActiveFilters = Boolean(keyword.trim() || category || time || matchMyInterests)
+          if (firstUnavailable !== secondUnavailable) {
+            return firstUnavailable ? 1 : -1
+          }
+
+          return first.index - second.index
+        })
+        .map((item) => item.activity),
+    [activities, userGender],
+  )
+
+  const hasActiveFilters = Boolean(keyword.trim() || category || fromDate || toDate || gender || matchMyInterests)
 
   useEffect(() => {
     let alive = true
@@ -66,6 +95,22 @@ export default function ActivityListPage() {
     }
   }, [])
 
+  useEffect(() => {
+    let alive = true
+
+    getMe()
+      .then((user) => {
+        if (alive) setUserGender(user?.gender ?? null)
+      })
+      .catch(() => {
+        if (alive) setUserGender(null)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [])
+
 
   useEffect(() => {
     let alive = true
@@ -84,7 +129,9 @@ export default function ActivityListPage() {
         const params = {
           keyword: deferredKeyword.trim() || undefined,
           category: categoryParam,
-          time: time || undefined,
+          fromDate: fromDate || undefined,
+          toDate: toDate || undefined,
+          gender: gender || undefined,
         }
 
         if (matchMyInterests && myInterests.length === 0 && !myInterestsLoading) {
@@ -110,7 +157,7 @@ export default function ActivityListPage() {
     return () => {
       alive = false
     }
-  }, [category, deferredKeyword, time, matchMyInterests, myInterests, myInterestsLoading])
+  }, [category, deferredKeyword, fromDate, toDate, gender, matchMyInterests, myInterests, myInterestsLoading])
 
   const toggleMatchMyInterests = async () => {
     if (matchMyInterests) {
@@ -135,7 +182,9 @@ export default function ActivityListPage() {
   const clearFilters = () => {
     setKeyword('')
     setCategory('')
-    setTime('')
+    setFromDate('')
+    setToDate('')
+    setGender('')
     setMatchMyInterests(false)
   }
 
@@ -197,15 +246,44 @@ export default function ActivityListPage() {
               </label>
 
               <label className="activity-browse-select">
-                <span className="activity-browse-field-label">Thời gian</span>
+                <span className="activity-browse-field-label">Giới tính</span>
                 <span className="activity-browse-select-shell">
-                  <select value={time} onChange={(event) => setTime(event.target.value)}>
-                    {TIME_FILTER_OPTIONS.map((item) => (
-                      <option key={item.value || 'all'} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
+                  <select value={gender} onChange={(event) => setGender(event.target.value)}>
+                    <option value="">Tất cả</option>
+                    <option value="male">Nam</option>
+                    <option value="female">Nữ</option>
+                    <option value="all">Không giới hạn</option>
                   </select>
+                </span>
+              </label>
+            </div>
+
+            <div className="activity-browse-filter-group activity-browse-date-range">
+              <label className="activity-browse-select">
+                <span className="activity-browse-field-label">Từ ngày</span>
+                <span className="activity-browse-select-shell">
+                  <input
+                    type="date"
+                    value={fromDate}
+                    max={toDate || undefined}
+                    onChange={(event) => {
+                      setFromDate(event.target.value)
+                    }}
+                  />
+                </span>
+              </label>
+
+              <label className="activity-browse-select">
+                <span className="activity-browse-field-label">Đến ngày</span>
+                <span className="activity-browse-select-shell">
+                  <input
+                    type="date"
+                    value={toDate}
+                    min={fromDate || undefined}
+                    onChange={(event) => {
+                      setToDate(event.target.value)
+                    }}
+                  />
                 </span>
               </label>
             </div>
@@ -264,8 +342,8 @@ export default function ActivityListPage() {
 
         {!loading && !error && activities.length > 0 && (
           <div className="activity-browse-grid">
-            {activities.map((activity) => (
-              <ActivityBrowseCard key={activity.id} activity={activity} />
+            {sortedActivities.map((activity) => (
+              <ActivityBrowseCard key={activity.id} activity={activity} userGender={userGender} />
             ))}
           </div>
         )}

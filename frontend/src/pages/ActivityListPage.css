@@ -134,6 +134,7 @@
 }
 
 .activity-browse-search input,
+.activity-browse-select input,
 .activity-browse-select select {
   width: 100%;
   min-height: 100%;
@@ -166,6 +167,11 @@
     calc(100% - 8px) calc(50% - 3px);
   background-size: 6px 6px, 6px 6px;
   background-repeat: no-repeat;
+}
+
+.activity-browse-select input[type="date"] {
+  padding: 0;
+  font-size: 0.95rem;
 }
 
 .activity-browse-search:focus-within .activity-browse-search-input,
@@ -343,6 +349,35 @@
   font-size: 0.82rem;
   font-weight: 700;
   text-align: right;
+}
+
+.activity-browse-status-pill {
+  justify-self: start;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.activity-browse-status-pill.is-open {
+  background: #e7f6ef;
+  color: #247a4d;
+}
+
+.activity-browse-status-pill.is-full {
+  background: #fff3dd;
+  color: #a95514;
+}
+
+.activity-browse-status-pill.is-ended {
+  background: #f1f2f4;
+  color: #687080;
+}
+
+.activity-browse-status-pill.is-restricted {
+  background: #fce7ef;
+  color: #a02f5f;
 }
 
 .activity-browse-title {

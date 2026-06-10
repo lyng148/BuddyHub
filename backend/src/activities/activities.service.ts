@@ -251,8 +251,8 @@ export class ActivitiesService {
 
       if (timeRange) {
         where.startTime = {
-          gte: timeRange.from,
-          lt: timeRange.to,
+          ...(timeRange.from ? { gte: timeRange.from } : {}),
+          ...(timeRange.to ? { lt: timeRange.to } : {}),
         };
       }
 
@@ -780,6 +780,9 @@ export class ActivitiesService {
   }
 
   private getTimeRange(query: GetActivitiesQueryDto) {
+    const customRange = this.getCustomTimeRange(query);
+    if (customRange) return customRange;
+
     const rawTime = this.getOptionalString(query, ['time', 'activityTime']);
     if (!rawTime) return undefined;
 
@@ -800,6 +803,22 @@ export class ActivitiesService {
     }
 
     return { from: today, to: this.startOfNextWeek(today) };
+  }
+
+  private getCustomTimeRange(query: GetActivitiesQueryDto) {
+    const rawFrom = this.getOptionalString(query, ['fromDate', 'startDateFrom']);
+    const rawTo = this.getOptionalString(query, ['toDate', 'startDateTo']);
+
+    if (!rawFrom && !rawTo) return undefined;
+
+    const from = rawFrom ? this.parseDateOnly(rawFrom) : undefined;
+    const to = rawTo ? this.addDays(this.parseDateOnly(rawTo), 1) : undefined;
+
+    if (from && to && from >= to) {
+      throw this.error();
+    }
+
+    return { from, to };
   }
 
   private getGender(query: GetActivitiesQueryDto): Gender | undefined {
@@ -935,6 +954,26 @@ export class ActivitiesService {
     }
 
     return parsed;
+  }
+
+  private parseDateOnly(value: string) {
+    const dateMatch = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!dateMatch) {
+      throw this.error();
+    }
+
+    const [, year, month, day] = dateMatch;
+    const date = new Date(Number(year), Number(month) - 1, Number(day));
+
+    if (
+      date.getFullYear() !== Number(year) ||
+      date.getMonth() !== Number(month) - 1 ||
+      date.getDate() !== Number(day)
+    ) {
+      throw this.error();
+    }
+
+    return date;
   }
 
   private parseDateAndTime(dateValue: string, timeValue: string) {

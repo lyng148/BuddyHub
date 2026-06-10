@@ -41,8 +41,11 @@ export type ActivityListItem = {
   categoryName: string
   location: string
   startTime: string
+  deadline?: string | null
   maxSlots: number
   currentParticipants: number
+  status?: ActivityStatus
+  gender?: ActivityGender
   description?: string | null
   purpose?: string | null
   host?: ActivityHost

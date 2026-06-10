@@ -187,6 +187,9 @@ export type FetchActivitiesParams = {
   keyword?: string
   category?: string | string[]
   time?: string
+  fromDate?: string
+  toDate?: string
+  gender?: string
 }
 
 export async function fetchActivities(params?: FetchActivitiesParams) {
@@ -194,6 +197,9 @@ export async function fetchActivities(params?: FetchActivitiesParams) {
 
   if (params?.keyword) serialized.keyword = params.keyword
   if (params?.time) serialized.time = params.time
+  if (params?.fromDate) serialized.fromDate = params.fromDate
+  if (params?.toDate) serialized.toDate = params.toDate
+  if (params?.gender) serialized.gender = params.gender
   if (params?.category !== undefined) {
     const value = Array.isArray(params.category)
       ? params.category.join(',')

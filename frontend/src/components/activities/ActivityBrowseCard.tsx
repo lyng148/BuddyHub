@@ -5,6 +5,7 @@ import type { ActivityListItem } from '../../types/activity'
 
 type ActivityBrowseCardProps = {
   activity: ActivityListItem
+  userGender?: string | null
 }
 
 function hostInitial(name?: string) {
@@ -12,13 +13,37 @@ function hostInitial(name?: string) {
   return char ? char.toUpperCase() : '?'
 }
 
-export function ActivityBrowseCard({ activity }: ActivityBrowseCardProps) {
+function getActivityAvailability(activity: ActivityListItem, userGender?: string | null) {
+  if (activity.status === 'FINISHED' || activity.status === 'CANCELLED' || activity.status === 'CLOSED') {
+    return { label: 'Đã kết thúc', tone: 'ended' }
+  }
+
+  if (activity.status === 'FULL' || activity.currentParticipants >= activity.maxSlots) {
+    return { label: 'Đã đủ thành viên', tone: 'full' }
+  }
+
+  if (activity.deadline && new Date() > new Date(activity.deadline)) {
+    return { label: 'Đã kết thúc', tone: 'ended' }
+  }
+
+  if (activity.gender && activity.gender !== 'ALL' && userGender && userGender !== activity.gender) {
+    return {
+      label: activity.gender === 'MALE' ? 'Chỉ dành cho nam' : 'Chỉ dành cho nữ',
+      tone: 'restricted',
+    }
+  }
+
+  return { label: 'Còn tham gia được', tone: 'open' }
+}
+
+export function ActivityBrowseCard({ activity, userGender }: ActivityBrowseCardProps) {
   const categoryStyle = getCategoryStyle(activity.categoryName)
   const fillPercent = activity.maxSlots > 0
     ? Math.min(100, Math.round((activity.currentParticipants / activity.maxSlots) * 100))
     : 0
   const summary = activity.description?.trim() || activity.purpose?.trim() || 'Chưa có mô tả chi tiết.'
   const hostName = activity.host?.name ?? 'BuddyHub member'
+  const availability = getActivityAvailability(activity, userGender)
 
   const goDetail = () => navigate(`/activities/${activity.id}`)
 
@@ -37,6 +62,10 @@ export function ActivityBrowseCard({ activity }: ActivityBrowseCardProps) {
         </span>
         <span className="activity-browse-date">{formatActivityDateShort(activity.startTime)}</span>
       </div>
+
+      <span className={`activity-browse-status-pill is-${availability.tone}`}>
+        {availability.label}
+      </span>
 
       <h3 className="activity-browse-title">{activity.title}</h3>
 

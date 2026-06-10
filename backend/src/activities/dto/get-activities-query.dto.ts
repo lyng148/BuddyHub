@@ -20,6 +20,18 @@ export class GetActivitiesQueryDto {
   activityTime?: unknown;
 
   @Allow()
+  fromDate?: unknown;
+
+  @Allow()
+  toDate?: unknown;
+
+  @Allow()
+  startDateFrom?: unknown;
+
+  @Allow()
+  startDateTo?: unknown;
+
+  @Allow()
   latitude?: unknown;
 
   @Allow()
