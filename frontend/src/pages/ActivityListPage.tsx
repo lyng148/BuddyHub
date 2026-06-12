@@ -250,9 +250,8 @@ export default function ActivityListPage() {
                 <span className="activity-browse-select-shell">
                   <select value={gender} onChange={(event) => setGender(event.target.value)}>
                     <option value="">Tất cả</option>
-                    <option value="male">Nam</option>
-                    <option value="female">Nữ</option>
-                    <option value="all">Không giới hạn</option>
+                    <option value="male">Chỉ nam</option>
+                    <option value="female">Chỉ nữ</option>
                   </select>
                 </span>
               </label>
